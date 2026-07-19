@@ -1,0 +1,19 @@
+{
+  "name": "羊羊机 · AI角色聊天手机",
+  "short_name": "羊羊机",
+  "description": "AI角色扮演聊天手机系统",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

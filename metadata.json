@@ -1,0 +1,6 @@
+{
+  "name": "YY0928 Phone OS Simulator",
+  "description": "An immersive, responsive Chinese-themed mobile phone OS simulator featuring 17 virtual applications (WeChat Moments, SMS, Mail, Shop, Music Player, Contacts, and more), custom API configuration, and dynamic theme skinning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

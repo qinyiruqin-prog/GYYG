@@ -1,0 +1,232 @@
+@import "tailwindcss";
+
+@theme {
+  --font-title: 'Ma Shan Zheng', serif;
+  --font-body: 'Noto Sans SC', system-ui, sans-serif;
+  --radius-phone: 38px;
+  --radius-app: 22px;
+  --radius-icon: 14px;
+}
+
+:root {
+  /* default: 深夜 */
+  --bg: #141414;
+  --bg-soft: #1c1c1c;
+  --bg-elev: #242424;
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-strong: rgba(255, 255, 255, 0.09);
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #e8e8e8;
+  --text-dim: #9a9a9a;
+  --text-faint: #5a5a5a;
+  --accent: #e0e0e0;
+  --accent-2: #666666;
+  --icon-bg: rgba(255, 255, 255, 0.08);
+  --icon-bg-active: rgba(255, 255, 255, 0.15);
+  --icon-color: #d4d4d4;
+  --icon-line: #c8c8c8;
+  --border-icon: rgba(255, 255, 255, 0.14);
+  --dock-bg: rgba(255, 255, 255, 0.07);
+  --wallpaper: radial-gradient(ellipse 80% 50% at 50% 0%, #1e1e1e 0%, transparent 60%), linear-gradient(160deg, #1a1a1a 0%, #0e0e0e 100%);
+  --danger: #e06c6c;
+  --success: #7fb079;
+  --warn: #d4a85a;
+  --radius: 22px;
+  --font-body: 'Noto Sans SC', system-ui, sans-serif;
+  --font-title: 'Ma Shan Zheng', 'Noto Sans SC', serif;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background: #000;
+  color: var(--text);
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- scrollbar ---- */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---- typography ---- */
+.font-title {
+  font-family: var(--font-title);
+  letter-spacing: 0.02em;
+}
+
+/* ---- surfaces ---- */
+.phone-surface {
+  background: var(--wallpaper);
+  color: var(--text);
+}
+.app-bg { background: var(--bg); }
+.app-bg-soft { background: var(--bg-soft); }
+.app-bg-elev { background: var(--bg-elev); }
+
+.glass {
+  background: var(--surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+}
+.glass-strong {
+  background: var(--surface-strong);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid var(--border);
+}
+
+/* ---- icon bg ---- */
+.icon-bg {
+  background: var(--icon-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.icon-color { color: var(--icon-color); }
+.icon-line { color: var(--icon-line, var(--icon-color)); }
+
+.txt-dim { color: var(--text-dim); }
+.txt-faint { color: var(--text-faint); }
+.txt-accent { color: var(--accent); }
+
+/* ---- interactions ---- */
+.tap {
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+.tap:active {
+  transform: scale(0.94);
+  opacity: 0.8;
+}
+
+/* ---- animations ---- */
+@keyframes app-open {
+  from { transform: scale(0.5); opacity: 0; border-radius: 60px; }
+  to   { transform: scale(1);   opacity: 1; border-radius: var(--radius); }
+}
+.animate-app-open {
+  animation: app-open 0.28s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in { animation: fade-in 0.2s ease; }
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.2, 0.9, 0.25, 1); }
+
+@keyframes sheet-up {
+  from { transform: translateY(30px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.animate-sheet-up { animation: sheet-up 0.26s cubic-bezier(0.2, 0.9, 0.25, 1); }
+
+@keyframes jiggle {
+  0%,100% { transform: rotate(-1.5deg); }
+  50%      { transform: rotate(1.5deg); }
+}
+.animate-jiggle { animation: jiggle 0.3s ease-in-out infinite; }
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin-slow 8s linear infinite; }
+
+@keyframes pulse-soft {
+  0%,100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+.animate-pulse-soft { animation: pulse-soft 1.4s ease-in-out infinite; }
+
+@keyframes banner-down {
+  from { transform: translateY(-30px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.animate-banner-down { animation: banner-down 0.28s cubic-bezier(0.2, 0.9, 0.25, 1); }
+
+/* safe area */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+/* ---- adjustable font size scaling ---- */
+.app-font-md {
+  font-size: 14px;
+}
+.app-font-lg {
+  font-size: 15.5px;
+}
+.app-font-xl {
+  font-size: 17px;
+}
+
+/* Specific text utilities scaling */
+.app-font-lg .text-\[14px\], .app-font-lg .text-sm {
+  font-size: 16px !important;
+}
+.app-font-xl .text-\[14px\], .app-font-xl .text-sm {
+  font-size: 18px !important;
+}
+.app-font-lg .text-\[12px\], .app-font-lg .text-xs {
+  font-size: 13.5px !important;
+}
+.app-font-xl .text-\[12px\], .app-font-xl .text-xs {
+  font-size: 15px !important;
+}
+.app-font-lg .text-\[15px\] {
+  font-size: 17px !important;
+}
+.app-font-xl .text-\[15px\] {
+  font-size: 19px !important;
+}
+.app-font-lg .text-\[13px\] {
+  font-size: 14.5px !important;
+}
+.app-font-xl .text-\[13px\] {
+  font-size: 16px !important;
+}
+.app-font-lg .text-\[11px\] {
+  font-size: 12.5px !important;
+}
+.app-font-xl .text-\[11px\] {
+  font-size: 14px !important;
+}
+.app-font-lg .text-\[10px\] {
+  font-size: 11.5px !important;
+}
+.app-font-xl .text-\[10px\] {
+  font-size: 13px !important;
+}
+.app-font-lg .text-base {
+  font-size: 18px !important;
+}
+.app-font-xl .text-base {
+  font-size: 20px !important;
+}
+
+
