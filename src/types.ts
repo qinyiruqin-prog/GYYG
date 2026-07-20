@@ -53,6 +53,13 @@ export interface UserIdentity {
   isAlt: boolean; // small account / alt
   parentId?: ID; // if alt, who it belongs to
   createdAt: number;
+  // v3.0 新增：扩展字段
+  persona?: string; // 用户人设描述（最大50000字符）
+  worldbook?: string; // 用户专属世界书（最大50000字符）
+  chatPersona?: string; // 聊天时的人设（最大20000字符）
+  remark?: string; // 备注名
+  onlineName?: string; // 网名
+  altAccounts?: ID[]; // 关联的小号列表
 }
 
 /* ---------- Partition / pairing ---------- */
@@ -82,13 +89,24 @@ export interface Character {
   name: string;
   avatar?: string;
   signature: string;
-  persona: string;      // system prompt describing the character
+  persona: string;      // system prompt describing the character (最大50000字符)
   greeting: string;     // opening message
   partitionId?: ID;
   imagePromptTemplate: string; // appearance prompt for generating images of this character
   faceRef?: string;     // data URL, uploaded face reference image
   balance?: number;     // wallet balance
   createdAt: number;
+  // v3.0 新增：扩展字段
+  worldbook?: string;   // 角色专属世界书（最大50000字符）
+  chatPersona?: string; // 聊天时的人设（最大20000字符，与世界书分离）
+  remark?: string;      // 用户给角色设置的备注名
+  onlineName?: string;  // 角色的网名
+  altAccounts?: ID[];   // 角色的小号列表
+  isAlt?: boolean;      // 是否是小号
+  parentId?: ID;        // 如果是小号，主号的ID
+  coupleAvatar?: string; // 情头（与用户配对的头像）
+  phoneLockedBy?: ID;   // 被哪个角色锁定了手机（情侣空间功能）
+  homeAddress?: string; // 家园地址（用于同居功能）
 }
 
 /* ---------- Chat ---------- */
@@ -102,6 +120,9 @@ export interface ChatMessage {
   ts: number;
   media?: MessageMedia[];
   innerThought?: string;
+  // v3.0 新增
+  deliveryOrder?: DeliveryOrder; // 外卖代付订单
+  senderAltId?: ID; // 发送者小号ID（支持用户/角色切换小号发消息）
 }
 export interface ChatThread {
   id: ID;
@@ -111,6 +132,13 @@ export interface ChatThread {
   charAltAvatar?: string; // Optional fake avatar/emoji
   messages: ChatMessage[];
   updatedAt: number;
+  // v3.0 新增
+  isGroup?: boolean; // 是否是群聊
+  groupMembers?: ID[]; // 群成员ID列表（用户+角色）
+  groupName?: string; // 群名称
+  groupAvatar?: string; // 群头像
+  onlineStatus?: 'online' | 'offline' | 'busy'; // 在线状态（查手机功能）
+  isChecking?: boolean; // 是否正在被查手机
 }
 
 /* ---------- Friend Request (好友申请) ---------- */
@@ -136,6 +164,13 @@ export interface Contact {
   signature: string;
   characterId?: ID;  // linked AI character (if any)
   createdAt: number;
+  // v3.0 新增
+  remark?: string; // 备注名
+  onlineName?: string; // 网名
+  relationship?: string; // 关系标签（朋友/同事/家人等）
+  isStranger?: boolean; // 是否是陌生人（可能感兴趣的人）
+  mutualFriends?: number; // 共同好友数量
+  canComment?: boolean; // 是否可以互相评论（不认识的角色）
 }
 
 /* ---------- SMS ---------- */
@@ -225,6 +260,13 @@ export interface Novel {
   addedAt: number;
   lastReadChapter?: ID;
   lastReadOffset?: number;
+  // v3.0 新增
+  aiGenerated?: boolean; // 是否AI生成
+  genre?: string; // 类型（言情/玄幻/科幻等）
+  tags?: string[]; // 标签
+  rating?: number; // 评分
+  wordCount?: number; // 字数
+  status?: 'ongoing' | 'completed'; // 连载状态
 }
 
 /* ---------- Shop (商城) ---------- */
@@ -289,8 +331,13 @@ export interface StoryEvent {
 export interface WorldEntry {
   id: ID;
   key: string;        // trigger keyword
-  content: string;    // lore text injected when keyword appears
+  content: string;    // lore text injected when keyword appears (最大50000字符)
   priority: number;
+  // v3.0 新增
+  type?: 'character' | 'user' | 'global'; // 分类：角色专属/用户专属/全局
+  ownerId?: ID;       // 所属角色或用户的ID
+  category?: string;  // 分类标签
+  enabled?: boolean;  // 是否启用
 }
 
 /* ---------- Social / Square (广场) ---------- */
@@ -328,6 +375,278 @@ export interface Restaurant {
 }
 
 import type { CalendarEvent } from './apps/CalendarScreen';
+
+/* ---------- v3.0 新增类型 ---------- */
+
+/* 纪念日 */
+export interface Anniversary {
+  id: ID;
+  title: string;
+  date: string; // YYYY-MM-DD
+  type: 'birthday' | 'anniversary' | 'holiday' | 'custom';
+  repeat: boolean; // 是否每年重复
+  characterId?: ID; // 关联的角色
+  notes?: string;
+  reminder?: number; // 提前提醒天数
+  ts: number;
+}
+
+/* 外卖订单（代付功能） */
+export interface DeliveryOrder {
+  id: ID;
+  restaurantId: ID;
+  items: { dishId: ID; name: string; price: number; qty: number }[];
+  total: number;
+  status: 'pending' | 'paid' | 'preparing' | 'delivering' | 'completed';
+  payerId?: ID; // 付款人ID（角色或用户）
+  receiverId?: ID; // 收货人ID
+  isPaidByOther: boolean; // 是否被代付
+  ts: number;
+}
+
+/* 线下模式记录 */
+export interface OfflineActivity {
+  id: ID;
+  characterId: ID;
+  activityType: 'date' | 'movie' | 'dinner' | 'travel' | 'shopping' | 'custom';
+  title: string;
+  description: string;
+  location?: string;
+  photos?: string[]; // 照片
+  startTime: number;
+  endTime?: number;
+  mood?: string;
+  tags?: string[];
+  ts: number;
+}
+
+/* 海龟汤 */
+export interface TurtleSoup {
+  id: ID;
+  title: string; // 谜面
+  truth: string; // 真相
+  authorId: ID;
+  authorName: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  category: string; // 分类
+  hints?: string[]; // 提示
+  questions: { id: ID; question: string; answer: string; askedBy: string; ts: number }[];
+  solved: boolean;
+  solvedBy?: string;
+  ts: number;
+}
+
+/* 情侣空间 */
+export interface CoupleSpace {
+  id: ID;
+  userId: ID;
+  characterId: ID;
+  coupleAvatar1?: string; // 情头1
+  coupleAvatar2?: string; // 情头2
+  anniversary: string; // 纪念日 YYYY-MM-DD
+  loveDays: number; // 恋爱天数
+  photos: string[]; // 情侣相册
+  timeline: { id: ID; content: string; photos?: string[]; ts: number }[]; // 时间轴
+  phoneLocked: boolean; // 手机是否被锁定
+  lockedUntil?: number; // 锁定到什么时候
+  ts: number;
+}
+
+/* 微博/X (原推特) */
+export interface SocialPost {
+  id: ID;
+  platform: 'weibo' | 'twitter';
+  authorId: ID;
+  authorName: string;
+  authorAvatar?: string;
+  content: string;
+  images?: string[];
+  likes: number;
+  reposts: number;
+  comments: { id: ID; authorName: string; content: string; ts: number }[];
+  isHot?: boolean; // 是否热门
+  topic?: string; // 话题标签
+  ts: number;
+}
+
+/* 记忆系统 */
+export interface Memory {
+  id: ID;
+  characterId: ID; // 哪个角色的记忆
+  userId?: ID; // 关联的用户
+  type: 'important' | 'conversation' | 'event' | 'emotion';
+  title: string;
+  content: string;
+  embedding?: number[]; // 向量嵌入（用于相似度搜索）
+  importance: number; // 重要度 0-100
+  tags?: string[];
+  relatedMemories?: ID[]; // 关联记忆
+  ts: number;
+  lastAccessed?: number; // 最后访问时间
+}
+
+/* 小游戏记录 */
+export interface GameRecord {
+  id: ID;
+  gameType: 'mahjong' | 'doudizhu' | 'poker' | 'custom';
+  players: { id: ID; name: string; score: number }[];
+  winner?: ID;
+  rounds: number;
+  startTime: number;
+  endTime: number;
+  replay?: string; // 回放数据（JSON）
+  ts: number;
+}
+
+/* 家园系统 */
+export interface Home {
+  id: ID;
+  ownerId: ID; // 房主ID（用户或角色）
+  cohabitants?: ID[]; // 同居者列表
+  rooms: HomeRoom[];
+  furniture: HomeFurniture[];
+  packages: HomePackage[]; // 快递包裹
+  ts: number;
+}
+
+export interface HomeRoom {
+  id: ID;
+  type: 'kitchen' | 'bedroom' | 'living' | 'bathroom' | 'closet' | 'custom';
+  name: string;
+  furniture: ID[]; // 房间内的家具ID
+  decoration?: string; // 装修风格
+}
+
+export interface HomeFurniture {
+  id: ID;
+  name: string;
+  type: 'table' | 'chair' | 'bed' | 'sofa' | 'appliance' | 'decoration';
+  icon?: string;
+  position?: { x: number; y: number }; // 摆放位置
+  functional?: boolean; // 是否有功能（如厨房可以做饭）
+}
+
+export interface HomePackage {
+  id: ID;
+  recipientId: ID; // 收件人
+  senderName: string; // 寄件人
+  content: string;
+  status: 'delivering' | 'arrived' | 'received' | 'helped'; // 是否被代收
+  helperName?: string; // 代收人
+  arrivedAt?: number;
+  ts: number;
+}
+
+/* 厨房做饭 */
+export interface Recipe {
+  id: ID;
+  name: string;
+  ingredients: { name: string; amount: string }[];
+  steps: string[];
+  image?: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  time: number; // 制作时间（分钟）
+  category: string;
+}
+
+export interface CookingRecord {
+  id: ID;
+  recipeId: ID;
+  cookId: ID; // 厨师ID
+  result: 'success' | 'normal' | 'failed';
+  photo?: string;
+  taste?: number; // 味道评分
+  sharedWith?: ID[]; // 分享给谁
+  ts: number;
+}
+
+/* 衣橱换装 */
+export interface Outfit {
+  id: ID;
+  name: string;
+  characterId?: ID; // 属于哪个角色
+  pieces: { type: 'top' | 'bottom' | 'dress' | 'shoes' | 'accessory'; image: string }[];
+  style: string; // 风格（休闲/正式/运动等）
+  occasion?: string; // 场合
+  favorite: boolean;
+  ts: number;
+}
+
+/* 体重管理 */
+export interface WeightRecord {
+  id: ID;
+  userId: ID;
+  weight: number; // kg
+  height?: number; // cm
+  bmi?: number;
+  bodyFat?: number; // 体脂率
+  notes?: string;
+  mood?: string;
+  photo?: string; // 对比照
+  ts: number;
+}
+
+export interface WeightGoal {
+  id: ID;
+  userId: ID;
+  targetWeight: number;
+  startWeight: number;
+  currentWeight: number;
+  deadline: string; // YYYY-MM-DD
+  plan?: string; // 计划
+  progress: number; // 进度百分比
+  ts: number;
+}
+
+/* 打卡目标（日历监督） */
+export interface DailyGoal {
+  id: ID;
+  title: string;
+  description?: string;
+  characterId?: ID; // 监督的角色
+  frequency: 'daily' | 'weekly' | 'custom';
+  targetDays?: number[]; // 每周的哪几天（0-6）
+  startDate: string; // YYYY-MM-DD
+  endDate?: string;
+  checkIns: { date: string; checked: boolean; note?: string; encouragement?: string }[];
+  rewards?: string; // 完成奖励
+  ts: number;
+}
+
+/* 角色卡导入格式 */
+export interface CharacterCard {
+  name: string;
+  description?: string;
+  personality?: string;
+  scenario?: string;
+  first_mes?: string;
+  mes_example?: string;
+  avatar?: string;
+  // Tavern格式支持
+  spec?: string;
+  spec_version?: string;
+  data?: {
+    name: string;
+    description: string;
+    personality: string;
+    scenario: string;
+    first_mes: string;
+    mes_example: string;
+    [key: string]: any;
+  };
+}
+
+/* 查手机记录 */
+export interface PhoneCheckRecord {
+  id: ID;
+  checkerId: ID; // 查看者（通常是用户）
+  targetId: ID; // 被查看者（角色）
+  type: 'chat' | 'moments' | 'album' | 'contacts' | 'full';
+  discovered?: string[]; // 发现的内容
+  caught: boolean; // 是否被发现
+  reaction?: string; // 角色反应
+  ts: number;
+}
 
 export interface WalletTransaction {
   id: string;
@@ -386,6 +705,32 @@ export interface AppSettings {
   userBalance?: number;
   walletFlows?: WalletTransaction[];
   installedWebApps?: InstalledWebApp[];
+
+  // v3.0 新增功能数据
+  anniversaries?: Anniversary[]; // 纪念日
+  deliveryOrders?: DeliveryOrder[]; // 外卖订单
+  offlineActivities?: OfflineActivity[]; // 线下模式
+  turtleSoups?: TurtleSoup[]; // 海龟汤
+  coupleSpaces?: CoupleSpace[]; // 情侣空间
+  socialPosts?: SocialPost[]; // 微博/Twitter
+  memories?: Memory[]; // 记忆系统
+  gameRecords?: GameRecord[]; // 游戏记录
+  homes?: Home[]; // 家园
+  recipes?: Recipe[]; // 菜谱
+  cookingRecords?: CookingRecord[]; // 做饭记录
+  outfits?: Outfit[]; // 衣橱
+  weightRecords?: WeightRecord[]; // 体重记录
+  weightGoals?: WeightGoal[]; // 体重目标
+  dailyGoals?: DailyGoal[]; // 打卡目标
+  phoneCheckRecords?: PhoneCheckRecord[]; // 查手机记录
+
+  // 功能开关
+  offlineMode?: boolean; // 线下模式开关
+  enableVectorMemory?: boolean; // 向量记忆开关
+  swipeBackEnabled?: boolean; // 侧边滑动返回
+  floatingBallEnabled?: boolean; // 悬浮球
+  innerThoughtOpacity?: number; // 心声透明度 0-1
+  autoSaveCharImages?: boolean; // 自动保存角色发送的图片到相册
 }
 
 export interface InstalledWebApp {

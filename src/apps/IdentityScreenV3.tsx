@@ -1,0 +1,615 @@
+import { useRef, useState } from 'react';
+import { Camera, Trash2, Star, Users, Download, Upload, Plus } from 'lucide-react';
+import { AppScreen } from '../components/AppScreen';
+import { ListGroup, Row, TextField, PrimaryButton } from '../components/ui';
+import { Confirm, Modal } from '../components/Sheet';
+import type { UserIdentity } from '../types';
+import { uid, fileToDataUrl } from '../utils';
+
+export function IdentityScreenV3({
+  users,
+  activeUserId,
+  onSave,
+  onDelete,
+  onSetActive,
+  onBack,
+}: {
+  users: UserIdentity[];
+  activeUserId: string | null;
+  onSave: (u: UserIdentity) => void;
+  onDelete: (id: string) => void;
+  onSetActive: (id: string) => void;
+  onBack: () => void;
+}) {
+  const [editing, setEditing] = useState<UserIdentity | null>(null);
+  const [confirmDel, setConfirmDel] = useState<UserIdentity | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [showAltAccounts, setShowAltAccounts] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const exportInputRef = useRef<HTMLInputElement>(null);
+
+  const startNew = () => {
+    setIsNew(true);
+    setEditing({
+      id: uid(),
+      nickname: '',
+      signature: '',
+      imagePromptTemplate: '',
+      isAlt: false,
+      createdAt: Date.now(),
+      persona: '',
+      worldbook: '',
+      chatPersona: '',
+      altAccounts: [],
+    });
+  };
+
+  const startEdit = (u: UserIdentity) => {
+    setIsNew(false);
+    setEditing({ ...u });
+  };
+
+  const createAltAccount = (parentId: string) => {
+    const parent = users.find(u => u.id === parentId);
+    if (!parent) return;
+
+    const altAccount: UserIdentity = {
+      id: uid(),
+      nickname: `${parent.nickname}的小号`,
+      signature: '',
+      imagePromptTemplate: parent.imagePromptTemplate,
+      isAlt: true,
+      parentId: parentId,
+      createdAt: Date.now(),
+      altAccounts: [],
+    };
+
+    onSave(altAccount);
+
+    // 更新父账号的小号列表
+    const updatedParent = {
+      ...parent,
+      altAccounts: [...(parent.altAccounts || []), altAccount.id],
+    };
+    onSave(updatedParent);
+  };
+
+  const handleImportJson = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const imported = JSON.parse(text) as UserIdentity | UserIdentity[];
+      const importList = Array.isArray(imported) ? imported : [imported];
+
+      let successCount = 0;
+      importList.forEach((u) => {
+        const newUser: UserIdentity = {
+          ...u,
+          id: uid(),
+          createdAt: Date.now(),
+          altAccounts: u.altAccounts || [],
+        };
+        onSave(newUser);
+        successCount++;
+      });
+
+      alert(`成功导入 ${successCount} 个身份`);
+    } catch (err) {
+      alert('导入失败：JSON格式错误');
+    }
+  };
+
+  const handleExport = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    const exportData = {
+      ...user,
+      id: undefined, // 移除ID，让导入时重新生成
+      createdAt: undefined,
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${user.nickname}-identity.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportAll = () => {
+    const mainAccounts = users.filter(u => !u.isAlt);
+    const exportData = mainAccounts.map(u => ({
+      ...u,
+      id: undefined,
+      createdAt: undefined,
+    }));
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `all-identities-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const getAltAccounts = (parentId: string) => {
+    return users.filter(u => u.parentId === parentId);
+  };
+
+  const mainAccounts = users.filter(u => !u.isAlt);
+
+  return (
+    <AppScreen
+      title="用户身份"
+      onBack={onBack}
+      right={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => importInputRef.current?.click()}
+            className="tap text-[var(--accent)] text-[15px] font-medium"
+          >
+            <Upload size={18} />
+          </button>
+          <button
+            onClick={handleExportAll}
+            className="tap text-[var(--accent)] text-[15px] font-medium"
+          >
+            <Download size={18} />
+          </button>
+          <button onClick={startNew} className="tap text-[var(--accent)] text-[15px] font-medium">
+            <Plus size={18} />
+          </button>
+        </div>
+      }
+    >
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={(e) => handleImportJson(e.target.files?.[0])}
+      />
+
+      <div className="text-[12px] txt-faint mb-3">
+        v3.0：支持无限小号、完整人设导入、世界书、Chat人设分离。每个身份可设置50000字人设和世界书。
+      </div>
+
+      <ListGroup>
+        {mainAccounts.length === 0 && (
+          <div className="px-4 py-8 text-center txt-faint text-sm">还没有身份，点右上角新建一个吧</div>
+        )}
+        {mainAccounts.map((u) => {
+          const altAccounts = getAltAccounts(u.id);
+          const isExpanded = showAltAccounts === u.id;
+
+          return (
+            <div key={u.id}>
+              <Row
+                label={
+                  <span className="flex items-center gap-2">
+                    {u.avatar ? (
+                      <img src={u.avatar} className="w-8 h-8 rounded-full object-cover" alt="" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-[var(--accent-2)] flex items-center justify-center text-white text-xs">
+                        {u.nickname.slice(0, 1) || '?'}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span>{u.nickname || '未命名'}</span>
+                        {activeUserId === u.id && <Star size={13} className="text-[var(--accent)] fill-[var(--accent)]" />}
+                        {altAccounts.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent)] text-black">
+                            {altAccounts.length}小号
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] txt-faint">{u.signature || '未设置签名'}</div>
+                    </div>
+                  </span>
+                }
+                onClick={() => startEdit(u)}
+                right={
+                  <div className="flex items-center gap-2">
+                    {altAccounts.length > 0 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowAltAccounts(isExpanded ? null : u.id);
+                        }}
+                        className="tap text-[12px] px-2 py-1 rounded-full glass txt-accent"
+                      >
+                        <Users size={14} />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        createAltAccount(u.id);
+                      }}
+                      className="tap text-[12px] px-2 py-1 rounded-full glass txt-accent"
+                    >
+                      +小号
+                    </button>
+                    {activeUserId !== u.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSetActive(u.id);
+                        }}
+                        className="tap text-[12px] px-2 py-1 rounded-full glass txt-accent"
+                      >
+                        设为当前
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleExport(u.id);
+                      }}
+                      className="tap txt-dim"
+                    >
+                      <Download size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDel(u);
+                      }}
+                      className="tap txt-dim"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                }
+              />
+
+              {/* 小号列表 */}
+              {isExpanded && altAccounts.length > 0 && (
+                <div className="ml-12 border-l-2 border-[var(--border)] pl-3 my-2 space-y-2">
+                  {altAccounts.map((alt) => (
+                    <Row
+                      key={alt.id}
+                      label={
+                        <span className="flex items-center gap-2">
+                          {alt.avatar ? (
+                            <img src={alt.avatar} className="w-6 h-6 rounded-full object-cover" alt="" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-[var(--surface)] flex items-center justify-center text-xs txt-dim">
+                              {alt.nickname.slice(0, 1)}
+                            </div>
+                          )}
+                          <span className="text-[13px]">{alt.nickname}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded glass txt-dim">小号</span>
+                        </span>
+                      }
+                      onClick={() => startEdit(alt)}
+                      right={
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDel(alt);
+                          }}
+                          className="tap txt-dim"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </ListGroup>
+
+      {editing && (
+        <IdentityEditorV3
+          isNew={isNew}
+          value={editing}
+          onClose={() => setEditing(null)}
+          onSave={(u) => {
+            onSave(u);
+            setEditing(null);
+          }}
+        />
+      )}
+
+      <Confirm
+        open={!!confirmDel}
+        title="删除身份"
+        message={`确定删除「${confirmDel?.nickname}」？该身份相关聊天记录将保留，但身份信息将被移除。`}
+        danger
+        onConfirm={() => {
+          if (confirmDel) onDelete(confirmDel.id);
+          setConfirmDel(null);
+        }}
+        onCancel={() => setConfirmDel(null)}
+      />
+    </AppScreen>
+  );
+}
+
+function IdentityEditorV3({
+  isNew,
+  value,
+  onClose,
+  onSave,
+}: {
+  isNew: boolean;
+  value: UserIdentity;
+  onClose: () => void;
+  onSave: (u: UserIdentity) => void;
+}) {
+  const [u, setU] = useState<UserIdentity>(value);
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const faceInput = useRef<HTMLInputElement>(null);
+  const [err, setErr] = useState('');
+  const [activeTab, setActiveTab] = useState<'basic' | 'persona' | 'worldbook' | 'chat'>('basic');
+
+  const pickImg = async (file: File | undefined, key: 'avatar' | 'faceRef') => {
+    if (!file) return;
+    const url = await fileToDataUrl(file);
+    setU((p) => ({ ...p, [key]: url }));
+  };
+
+  const save = () => {
+    if (!u.nickname.trim()) {
+      setErr('请填写昵称');
+      return;
+    }
+    onSave(u);
+  };
+
+  const getCharCount = (text: string | undefined, limit: number) => {
+    const count = text?.length || 0;
+    const percentage = Math.min((count / limit) * 100, 100);
+    const color = percentage > 90 ? 'var(--danger)' : percentage > 70 ? 'var(--warn)' : 'var(--text-faint)';
+    return { count, percentage, color };
+  };
+
+  return (
+    <Modal open onClose={onClose} title={isNew ? '新建身份' : '编辑身份'}>
+      <div className="mb-4">
+        {/* 标签切换 */}
+        <div className="flex gap-2 mb-4 p-1 glass-strong rounded-xl">
+          {[
+            { key: 'basic', label: '基本' },
+            { key: 'persona', label: '人设' },
+            { key: 'worldbook', label: '世界书' },
+            { key: 'chat', label: 'Chat' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as any)}
+              className={`flex-1 py-2 px-3 rounded-lg text-[13px] font-medium transition-all ${
+                activeTab === tab.key ? 'bg-[var(--accent)] text-black' : 'txt-dim hover:txt-accent'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 内容区域 */}
+        <div className="max-h-[60vh] overflow-y-auto pr-2 no-scrollbar">
+          {/* 基本信息 */}
+          {activeTab === 'basic' && (
+            <div>
+              <div className="glass-strong rounded-2xl p-4 mb-4">
+                <div className="text-[13px] font-medium mb-3 txt-accent">头像设置</div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => avatarInput.current?.click()}
+                    className="tap relative w-20 h-20 rounded-full overflow-hidden glass-strong flex items-center justify-center border-2 border-[var(--border)]"
+                  >
+                    {u.avatar ? (
+                      <img src={u.avatar} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      <Camera size={24} className="txt-dim" />
+                    )}
+                  </button>
+                  <div className="flex-1">
+                    <div className="text-[13px] mb-1">点击上传头像</div>
+                    <div className="text-[11px] txt-faint">支持 JPG、PNG 格式</div>
+                  </div>
+                  <input
+                    ref={avatarInput}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => pickImg(e.target.files?.[0], 'avatar')}
+                  />
+                </div>
+              </div>
+
+              <div className="glass-strong rounded-2xl p-4 mb-4">
+                <div className="text-[13px] font-medium mb-3 txt-accent">基本信息</div>
+                <TextField label="昵称 *" value={u.nickname} onChange={(v) => setU({ ...u, nickname: v })} placeholder="请输入昵称" />
+                <TextField
+                  label="网名"
+                  value={u.onlineName || ''}
+                  onChange={(v) => setU({ ...u, onlineName: v })}
+                  placeholder="在社交平台显示的名称"
+                />
+                <TextField
+                  label="备注名"
+                  value={u.remark || ''}
+                  onChange={(v) => setU({ ...u, remark: v })}
+                  placeholder="给自己设置的备注"
+                />
+                <TextField
+                  label="个性签名"
+                  value={u.signature}
+                  onChange={(v) => setU({ ...u, signature: v })}
+                  placeholder="一句话介绍自己"
+                />
+              </div>
+
+              <div className="glass-strong rounded-2xl p-4 mb-4">
+                <div className="text-[13px] font-medium mb-3 txt-accent">AI绘图设置</div>
+                <label className="block mb-3">
+                  <div className="text-[12px] txt-dim mb-2">图片生成提示词模板</div>
+                  <textarea
+                    value={u.imagePromptTemplate}
+                    onChange={(e) => setU({ ...u, imagePromptTemplate: e.target.value })}
+                    placeholder="例如：20岁女性，长发，温柔气质"
+                    rows={3}
+                    className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
+                  />
+                </label>
+
+                <div className="mb-3">
+                  <div className="text-[12px] txt-dim mb-2">人脸参考图</div>
+                  <button
+                    onClick={() => faceInput.current?.click()}
+                    className="tap w-full h-24 rounded-xl glass-strong flex items-center justify-center overflow-hidden border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] transition-colors"
+                  >
+                    {u.faceRef ? (
+                      <img src={u.faceRef} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      <div className="text-center">
+                        <Camera size={24} className="txt-dim mx-auto mb-1" />
+                        <div className="text-[11px] txt-faint">上传人脸参考图</div>
+                      </div>
+                    )}
+                  </button>
+                  <input ref={faceInput} type="file" accept="image/*" className="hidden" onChange={(e) => pickImg(e.target.files?.[0], 'faceRef')} />
+                </div>
+              </div>
+
+              <div className="glass-strong rounded-2xl p-4 mb-4">
+                <div className="text-[13px] font-medium mb-3 txt-accent">高级选项</div>
+                <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-[var(--surface)] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={u.isAlt}
+                    onChange={(e) => setU({ ...u, isAlt: e.target.checked })}
+                    className="w-5 h-5 mt-0.5 accent-[var(--accent)] cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <div className="text-[14px] mb-1">设为小号</div>
+                    <div className="text-[11px] txt-faint">用于匿名接触角色，不暴露正式身份</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* 人设 */}
+          {activeTab === 'persona' && (
+            <div className="glass-strong rounded-2xl p-4">
+              <div className="text-[13px] font-medium mb-2 txt-accent flex items-center justify-between">
+                <span>完整人设描述</span>
+                <span
+                  className="text-[11px]"
+                  style={{ color: getCharCount(u.persona, 50000).color }}
+                >
+                  {getCharCount(u.persona, 50000).count} / 50,000
+                </span>
+              </div>
+              <div className="text-[11px] txt-faint mb-3">
+                详细描述你的性格、背景、经历、喜好等。这将作为AI理解你的基础。支持最多50,000字符。
+              </div>
+              <textarea
+                value={u.persona || ''}
+                onChange={(e) => setU({ ...u, persona: e.target.value })}
+                placeholder="例如：我是一个25岁的软件工程师，性格开朗外向，喜欢旅行和摄影..."
+                rows={15}
+                maxLength={50000}
+                className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
+              />
+              <div className="mt-2 h-2 bg-[var(--surface)] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[var(--accent)] transition-all"
+                  style={{ width: `${getCharCount(u.persona, 50000).percentage}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 世界书 */}
+          {activeTab === 'worldbook' && (
+            <div className="glass-strong rounded-2xl p-4">
+              <div className="text-[13px] font-medium mb-2 txt-accent flex items-center justify-between">
+                <span>个人世界书</span>
+                <span
+                  className="text-[11px]"
+                  style={{ color: getCharCount(u.worldbook, 50000).color }}
+                >
+                  {getCharCount(u.worldbook, 50000).count} / 50,000
+                </span>
+              </div>
+              <div className="text-[11px] txt-faint mb-3">
+                记录你的世界观、背景设定、关键信息等。这些内容会在相关时被引用。支持最多50,000字符。
+              </div>
+              <textarea
+                value={u.worldbook || ''}
+                onChange={(e) => setU({ ...u, worldbook: e.target.value })}
+                placeholder="例如：我生活在2024年的上海，从事AI行业。我有一个创业公司..."
+                rows={15}
+                maxLength={50000}
+                className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
+              />
+              <div className="mt-2 h-2 bg-[var(--surface)] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[var(--accent)] transition-all"
+                  style={{ width: `${getCharCount(u.worldbook, 50000).percentage}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Chat人设 */}
+          {activeTab === 'chat' && (
+            <div className="glass-strong rounded-2xl p-4">
+              <div className="text-[13px] font-medium mb-2 txt-accent flex items-center justify-between">
+                <span>Chat专用人设</span>
+                <span
+                  className="text-[11px]"
+                  style={{ color: getCharCount(u.chatPersona, 20000).color }}
+                >
+                  {getCharCount(u.chatPersona, 20000).count} / 20,000
+                </span>
+              </div>
+              <div className="text-[11px] txt-faint mb-3">
+                专门用于聊天时的人设，会覆盖通用人设。适合设置聊天风格、说话习惯等。支持最多20,000字符。
+              </div>
+              <textarea
+                value={u.chatPersona || ''}
+                onChange={(e) => setU({ ...u, chatPersona: e.target.value })}
+                placeholder="例如：聊天时我喜欢用emoji，说话比较幽默轻松..."
+                rows={12}
+                maxLength={20000}
+                className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
+              />
+              <div className="mt-2 h-2 bg-[var(--surface)] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[var(--accent)] transition-all"
+                  style={{ width: `${getCharCount(u.chatPersona, 20000).percentage}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {err && (
+          <div className="text-[12px] text-[var(--danger)] mb-2 text-center p-2 glass-strong rounded-lg">{err}</div>
+        )}
+      </div>
+
+      <div className="flex gap-3 pt-4 border-t border-[var(--border)]">
+        <button onClick={onClose} className="tap flex-1 h-11 rounded-full glass-strong font-medium">
+          取消
+        </button>
+        <div className="flex-1">
+          <PrimaryButton onClick={save}>保存身份</PrimaryButton>
+        </div>
+      </div>
+    </Modal>
+  );
+}

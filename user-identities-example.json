@@ -1,0 +1,32 @@
+[
+  {
+    "nickname": "阳光少年",
+    "signature": "热爱运动，享受生活每一刻",
+    "imagePromptTemplate": "20岁男性，短发，阳光帅气，运动风格，健康肤色，充满活力",
+    "isAlt": false
+  },
+  {
+    "nickname": "文艺青年",
+    "signature": "书香为伴，咖啡相随",
+    "imagePromptTemplate": "25岁女性，长发，温柔气质，文艺范，清新淡雅，知性美",
+    "isAlt": false
+  },
+  {
+    "nickname": "科技宅",
+    "signature": "代码改变世界",
+    "imagePromptTemplate": "28岁男性，中短发，戴眼镜，程序员风格，理工男气质",
+    "isAlt": false
+  },
+  {
+    "nickname": "甜美女孩",
+    "signature": "每天都要开心呀~",
+    "imagePromptTemplate": "22岁女性，双马尾或短发，可爱甜美，元气满满，少女感",
+    "isAlt": false
+  },
+  {
+    "nickname": "神秘访客",
+    "signature": "...",
+    "imagePromptTemplate": "身份不明，神秘气质，朦胧美感",
+    "isAlt": true
+  }
+]

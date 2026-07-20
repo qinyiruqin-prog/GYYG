@@ -4,6 +4,7 @@ import { Desktop } from './Desktop';
 import { StatusBar } from './StatusBar';
 import { HomeIndicator } from './HomeIndicator';
 import { ComingSoon } from './ComingSoon';
+import { FloatingBall } from './FloatingBall';
 import { MeApp } from '../apps/MeApp';
 import { AssistantScreen } from '../apps/AssistantScreen';
 import { ApiPresetScreen, presetToApi } from '../apps/ApiPresetScreen';
@@ -32,6 +33,25 @@ import { GeneratorScreen } from '../apps/GeneratorScreen';
 import { SocialScreen } from '../apps/SocialScreen';
 import { TruthOrDareScreen } from '../apps/TruthOrDareScreen';
 import { PeriodScreen, getPeriodPrompt } from '../apps/PeriodScreen';
+// v3.0 新增应用
+import { IdentityScreenV3 } from '../apps/IdentityScreenV3';
+import { SettingsScreenV3 } from '../apps/SettingsScreenV3';
+import { AnniversaryScreen } from '../apps/AnniversaryScreen';
+import {
+  GroupChatScreen,
+  PhoneCheckScreen,
+  OfflineModeScreen,
+  CoupleSpaceScreen,
+  HomeSystemScreen,
+  TurtleSoupScreen,
+  GamesScreen,
+  WeiboScreen,
+  TwitterScreen,
+  MemoryScreen,
+  WeightManageScreen,
+  DiscoverScreen,
+  AltAccountsScreen,
+} from '../apps/V3NewApps';
 import { Sheet } from './Sheet';
 import { useMusicPlayer } from '../useMusicPlayer';
 import { isDark } from '../themes';
@@ -619,6 +639,37 @@ export function PhoneShell({
         />
       );
     }
+
+    // v3.0 新增应用路由
+    if (open === 'settings_v3')
+      return (
+        <SettingsScreenV3
+          innerThoughtOpacity={settings.innerThoughtOpacity || 0.7}
+          swipeBackEnabled={settings.swipeBackEnabled !== false}
+          floatingBallEnabled={settings.floatingBallEnabled || false}
+          autoSaveCharImages={settings.autoSaveCharImages !== false}
+          offlineMode={settings.offlineMode || false}
+          enableVectorMemory={settings.enableVectorMemory || false}
+          onUpdateSetting={(key, value) => updateSettings({ [key]: value })}
+          onBack={goHome}
+        />
+      );
+
+    if (open === 'anniversary') return <AnniversaryScreen onBack={goHome} />;
+    if (open === 'group_chat') return <GroupChatScreen onBack={goHome} />;
+    if (open === 'phone_check') return <PhoneCheckScreen onBack={goHome} />;
+    if (open === 'offline_mode') return <OfflineModeScreen onBack={goHome} />;
+    if (open === 'couple_space') return <CoupleSpaceScreen onBack={goHome} />;
+    if (open === 'home_system') return <HomeSystemScreen onBack={goHome} />;
+    if (open === 'turtle_soup') return <TurtleSoupScreen onBack={goHome} />;
+    if (open === 'games') return <GamesScreen onBack={goHome} />;
+    if (open === 'weibo') return <WeiboScreen onBack={goHome} />;
+    if (open === 'twitter') return <TwitterScreen onBack={goHome} />;
+    if (open === 'memory') return <MemoryScreen onBack={goHome} />;
+    if (open === 'weight') return <WeightManageScreen onBack={goHome} />;
+    if (open === 'discover') return <DiscoverScreen onBack={goHome} />;
+    if (open === 'alt_accounts') return <AltAccountsScreen onBack={goHome} />;
+
     return <ComingSoon appId={open} onBack={goHome} />;
   };
 
@@ -667,6 +718,13 @@ export function PhoneShell({
       />
       <StatusBar style={dark ? 'dark' : 'light'} />
       {renderOpen()}
+
+      {/* 悬浮球 */}
+      <FloatingBall
+        enabled={settings.floatingBallEnabled !== false && !open}
+        onClick={() => setBallOpen(true)}
+      />
+
       <Sheet open={ballOpen} onClose={() => setBallOpen(false)} title="快捷方式">
         <div className="space-y-2">
           <ShortcutRow emoji="✨" name="羊羊助手" desc="问答 AI" onClick={() => { setBallOpen(false); setOpen('assistant'); }} />

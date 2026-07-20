@@ -16,9 +16,16 @@ export const defaultSettings = (): AppSettings => ({
   partitions: [],
   desktop: {
     pages: [
-      ['sheep', 'moments', 'contacts', 'sms', 'mail', 'waimai', 'xiaohongshu', 'novel'],
-      ['shop', 'forum', 'calendar', 'worldbook', 'generator', 'social', 'truth_or_dare', 'period'],
-      ['notes_app', 'weather', 'calculator', 'browser', 'diary', 'wallet']
+      // 第1页 - 社交通讯（7个图标，移除sheep）
+      ['moments', 'contacts', 'sms', 'mail', 'waimai', 'xiaohongshu', 'novel', 'shop'],
+      // 第2页 - 娱乐社区（8个图标）
+      ['forum', 'calendar', 'worldbook', 'generator', 'social', 'truth_or_dare', 'period', 'notes_app'],
+      // 第3页 - 工具应用（8个图标）
+      ['weather', 'calculator', 'browser', 'diary', 'wallet', 'me', 'novel', 'xiaohongshu'],
+      // 第4页 - v3.0新功能A（8个图标）
+      ['anniversary', 'group_chat', 'phone_check', 'offline_mode', 'couple_space', 'home_system', 'turtle_soup', 'games'],
+      // 第5页 - v3.0新功能B（8个图标）
+      ['weibo', 'twitter', 'memory', 'weight', 'discover', 'alt_accounts', 'settings_v3', 'closet']
     ],
     widgets: [],
   },

@@ -9,28 +9,28 @@
 }
 
 :root {
-  /* default: 深夜 */
+  /* default: 深夜 - 优化透明度，提高可读性 */
   --bg: #141414;
   --bg-soft: #1c1c1c;
-  --bg-elev: #242424;
-  --surface: rgba(255, 255, 255, 0.05);
-  --surface-strong: rgba(255, 255, 255, 0.09);
-  --border: rgba(255, 255, 255, 0.08);
-  --text: #e8e8e8;
-  --text-dim: #9a9a9a;
-  --text-faint: #5a5a5a;
+  --bg-elev: #2a2a2a;
+  --surface: rgba(255, 255, 255, 0.12);
+  --surface-strong: rgba(255, 255, 255, 0.18);
+  --border: rgba(255, 255, 255, 0.15);
+  --text: #f0f0f0;
+  --text-dim: #b8b8b8;
+  --text-faint: #808080;
   --accent: #e0e0e0;
-  --accent-2: #666666;
-  --icon-bg: rgba(255, 255, 255, 0.08);
-  --icon-bg-active: rgba(255, 255, 255, 0.15);
-  --icon-color: #d4d4d4;
-  --icon-line: #c8c8c8;
-  --border-icon: rgba(255, 255, 255, 0.14);
-  --dock-bg: rgba(255, 255, 255, 0.07);
+  --accent-2: #888888;
+  --icon-bg: rgba(255, 255, 255, 0.12);
+  --icon-bg-active: rgba(255, 255, 255, 0.22);
+  --icon-color: #e0e0e0;
+  --icon-line: #d0d0d0;
+  --border-icon: rgba(255, 255, 255, 0.20);
+  --dock-bg: rgba(255, 255, 255, 0.12);
   --wallpaper: radial-gradient(ellipse 80% 50% at 50% 0%, #1e1e1e 0%, transparent 60%), linear-gradient(160deg, #1a1a1a 0%, #0e0e0e 100%);
-  --danger: #e06c6c;
-  --success: #7fb079;
-  --warn: #d4a85a;
+  --danger: #ff6b6b;
+  --success: #51cf66;
+  --warn: #ffd43b;
   --radius: 22px;
   --font-body: 'Noto Sans SC', system-ui, sans-serif;
   --font-title: 'Ma Shan Zheng', 'Noto Sans SC', serif;
@@ -96,6 +96,28 @@ body {
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
   border: 1px solid var(--border);
+}
+
+/* v3.0 新增：心声透明度可调节 */
+.inner-thought {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: var(--inner-thought-opacity, 0.7);
+  transition: opacity 0.3s ease;
+}
+
+.inner-thought-low {
+  opacity: 0.4;
+}
+
+.inner-thought-medium {
+  opacity: 0.7;
+}
+
+.inner-thought-high {
+  opacity: 1;
 }
 
 /* ---- icon bg ---- */
