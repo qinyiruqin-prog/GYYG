@@ -349,7 +349,6 @@ function IdentityEditorV3({
   const avatarInput = useRef<HTMLInputElement>(null);
   const faceInput = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState('');
-  const [activeTab, setActiveTab] = useState<'basic' | 'persona' | 'worldbook' | 'chat'>('basic');
 
   const pickImg = async (file: File | undefined, key: 'avatar' | 'faceRef') => {
     if (!file) return;
@@ -375,230 +374,141 @@ function IdentityEditorV3({
   return (
     <Modal open onClose={onClose} title={isNew ? '新建身份' : '编辑身份'}>
       <div className="mb-4">
-        {/* 标签切换 */}
-        <div className="flex gap-2 mb-4 p-1 glass-strong rounded-xl">
-          {[
-            { key: 'basic', label: '基本' },
-            { key: 'persona', label: '人设' },
-            { key: 'worldbook', label: '世界书' },
-            { key: 'chat', label: 'Chat' },
-          ].map((tab) => (
+        {/* 内容区域 - 移除Tab，所有字段在一个页面 */}
+        <div className="max-h-[60vh] overflow-y-auto pr-2 no-scrollbar space-y-4">
+
+          {/* 1. 头像 */}
+          <div className="glass-strong rounded-2xl p-4">
+            <div className="text-[13px] font-medium mb-3 txt-accent">头像</div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => avatarInput.current?.click()}
+                className="tap relative w-20 h-20 rounded-full overflow-hidden glass-strong flex items-center justify-center border-2 border-[var(--border)]"
+              >
+                {u.avatar ? (
+                  <img src={u.avatar} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <Camera size={24} className="txt-dim" />
+                )}
+              </button>
+              <div className="flex-1">
+                <div className="text-[13px] mb-1">点击上传头像</div>
+                <div className="text-[11px] txt-faint">支持 JPG、PNG 格式</div>
+              </div>
+              <input
+                ref={avatarInput}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => pickImg(e.target.files?.[0], 'avatar')}
+              />
+            </div>
+          </div>
+
+          {/* 2. 昵称 */}
+          <div className="glass-strong rounded-2xl p-4">
+            <TextField
+              label="昵称 *"
+              value={u.nickname}
+              onChange={(v) => setU({ ...u, nickname: v })}
+              placeholder="请输入昵称"
+            />
+          </div>
+
+          {/* 3. 一句话介绍 */}
+          <div className="glass-strong rounded-2xl p-4">
+            <TextField
+              label="一句话介绍自己"
+              value={u.signature}
+              onChange={(v) => setU({ ...u, signature: v })}
+              placeholder="例如：热爱生活的程序员"
+            />
+          </div>
+
+          {/* 4. 人设（最重要！） */}
+          <div className="glass-strong rounded-2xl p-4">
+            <div className="text-[13px] font-medium mb-2 txt-accent flex items-center justify-between">
+              <span>人设描述 *</span>
+              <span className="text-[11px] txt-faint">
+                {(u.persona || '').length} / 50,000
+              </span>
+            </div>
+            <div className="text-[11px] txt-faint mb-3">
+              详细描述你的性格、背景、经历、喜好等。这是AI理解你的基础。
+            </div>
+            <textarea
+              value={u.persona || ''}
+              onChange={(e) => setU({ ...u, persona: e.target.value })}
+              placeholder="例如：我是一个25岁的程序员，性格内向但喜欢深度交流。喜欢读科幻小说，最喜欢《三体》。工作是后端开发，擅长Python和Go。平时喜欢听后摇音乐，周末会去爬山..."
+              rows={8}
+              maxLength={50000}
+              className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
+            />
+          </div>
+
+          {/* 5. AI绘图提示词 */}
+          <div className="glass-strong rounded-2xl p-4">
+            <div className="text-[13px] font-medium mb-2 txt-accent">AI绘图提示词</div>
+            <div className="text-[11px] txt-faint mb-3">
+              用于生成你的头像或形象图片
+            </div>
+            <textarea
+              value={u.imagePromptTemplate}
+              onChange={(e) => setU({ ...u, imagePromptTemplate: e.target.value })}
+              placeholder="例如：25岁亚洲男性，短发，戴眼镜，休闲装，温和表情"
+              rows={3}
+              className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
+            />
+          </div>
+
+          {/* 6. 人脸参考图 */}
+          <div className="glass-strong rounded-2xl p-4">
+            <div className="text-[13px] font-medium mb-2 txt-accent">人脸参考图</div>
+            <div className="text-[11px] txt-faint mb-3">
+              上传你的正面照片，用于AI识别和生成
+            </div>
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
-              className={`flex-1 py-2 px-3 rounded-lg text-[13px] font-medium transition-all ${
-                activeTab === tab.key ? 'bg-[var(--accent)] text-black' : 'txt-dim hover:txt-accent'
-              }`}
+              onClick={() => faceInput.current?.click()}
+              className="tap w-full h-32 rounded-xl glass-strong flex items-center justify-center overflow-hidden border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] transition-colors"
             >
-              {tab.label}
+              {u.faceRef ? (
+                <img src={u.faceRef} className="w-full h-full object-cover" alt="" />
+              ) : (
+                <div className="text-center">
+                  <Camera size={32} className="txt-dim mx-auto mb-2" />
+                  <div className="text-[12px] txt-faint">点击上传人脸参考图</div>
+                </div>
+              )}
             </button>
-          ))}
-        </div>
+            <input
+              ref={faceInput}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => pickImg(e.target.files?.[0], 'faceRef')}
+            />
+          </div>
 
-        {/* 内容区域 */}
-        <div className="max-h-[60vh] overflow-y-auto pr-2 no-scrollbar">
-          {/* 基本信息 */}
-          {activeTab === 'basic' && (
-            <div>
-              <div className="glass-strong rounded-2xl p-4 mb-4">
-                <div className="text-[13px] font-medium mb-3 txt-accent">头像设置</div>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => avatarInput.current?.click()}
-                    className="tap relative w-20 h-20 rounded-full overflow-hidden glass-strong flex items-center justify-center border-2 border-[var(--border)]"
-                  >
-                    {u.avatar ? (
-                      <img src={u.avatar} className="w-full h-full object-cover" alt="" />
-                    ) : (
-                      <Camera size={24} className="txt-dim" />
-                    )}
-                  </button>
-                  <div className="flex-1">
-                    <div className="text-[13px] mb-1">点击上传头像</div>
-                    <div className="text-[11px] txt-faint">支持 JPG、PNG 格式</div>
-                  </div>
-                  <input
-                    ref={avatarInput}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => pickImg(e.target.files?.[0], 'avatar')}
-                  />
-                </div>
-              </div>
-
-              <div className="glass-strong rounded-2xl p-4 mb-4">
-                <div className="text-[13px] font-medium mb-3 txt-accent">基本信息</div>
-                <TextField label="昵称 *" value={u.nickname} onChange={(v) => setU({ ...u, nickname: v })} placeholder="请输入昵称" />
-                <TextField
-                  label="网名"
-                  value={u.onlineName || ''}
-                  onChange={(v) => setU({ ...u, onlineName: v })}
-                  placeholder="在社交平台显示的名称"
-                />
-                <TextField
-                  label="备注名"
-                  value={u.remark || ''}
-                  onChange={(v) => setU({ ...u, remark: v })}
-                  placeholder="给自己设置的备注"
-                />
-                <TextField
-                  label="个性签名"
-                  value={u.signature}
-                  onChange={(v) => setU({ ...u, signature: v })}
-                  placeholder="一句话介绍自己"
-                />
-              </div>
-
-              <div className="glass-strong rounded-2xl p-4 mb-4">
-                <div className="text-[13px] font-medium mb-3 txt-accent">AI绘图设置</div>
-                <label className="block mb-3">
-                  <div className="text-[12px] txt-dim mb-2">图片生成提示词模板</div>
-                  <textarea
-                    value={u.imagePromptTemplate}
-                    onChange={(e) => setU({ ...u, imagePromptTemplate: e.target.value })}
-                    placeholder="例如：20岁女性，长发，温柔气质"
-                    rows={3}
-                    className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
-                  />
-                </label>
-
-                <div className="mb-3">
-                  <div className="text-[12px] txt-dim mb-2">人脸参考图</div>
-                  <button
-                    onClick={() => faceInput.current?.click()}
-                    className="tap w-full h-24 rounded-xl glass-strong flex items-center justify-center overflow-hidden border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] transition-colors"
-                  >
-                    {u.faceRef ? (
-                      <img src={u.faceRef} className="w-full h-full object-cover" alt="" />
-                    ) : (
-                      <div className="text-center">
-                        <Camera size={24} className="txt-dim mx-auto mb-1" />
-                        <div className="text-[11px] txt-faint">上传人脸参考图</div>
-                      </div>
-                    )}
-                  </button>
-                  <input ref={faceInput} type="file" accept="image/*" className="hidden" onChange={(e) => pickImg(e.target.files?.[0], 'faceRef')} />
-                </div>
-              </div>
-
-              <div className="glass-strong rounded-2xl p-4 mb-4">
-                <div className="text-[13px] font-medium mb-3 txt-accent">高级选项</div>
-                <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-[var(--surface)] transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={u.isAlt}
-                    onChange={(e) => setU({ ...u, isAlt: e.target.checked })}
-                    className="w-5 h-5 mt-0.5 accent-[var(--accent)] cursor-pointer"
-                  />
-                  <div className="flex-1">
-                    <div className="text-[14px] mb-1">设为小号</div>
-                    <div className="text-[11px] txt-faint">用于匿名接触角色，不暴露正式身份</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* 人设 */}
-          {activeTab === 'persona' && (
-            <div className="glass-strong rounded-2xl p-4">
-              <div className="text-[13px] font-medium mb-2 txt-accent flex items-center justify-between">
-                <span>完整人设描述</span>
-                <span
-                  className="text-[11px]"
-                  style={{ color: getCharCount(u.persona, 50000).color }}
-                >
-                  {getCharCount(u.persona, 50000).count} / 50,000
-                </span>
-              </div>
-              <div className="text-[11px] txt-faint mb-3">
-                详细描述你的性格、背景、经历、喜好等。这将作为AI理解你的基础。支持最多50,000字符。
-              </div>
-              <textarea
-                value={u.persona || ''}
-                onChange={(e) => setU({ ...u, persona: e.target.value })}
-                placeholder="例如：我是一个25岁的软件工程师，性格开朗外向，喜欢旅行和摄影..."
-                rows={15}
-                maxLength={50000}
-                className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
+          {/* 7. 设为小号 */}
+          <div className="glass-strong rounded-2xl p-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={u.isAlt}
+                onChange={(e) => setU({ ...u, isAlt: e.target.checked })}
+                className="w-5 h-5 mt-0.5 accent-[var(--accent)] cursor-pointer"
               />
-              <div className="mt-2 h-2 bg-[var(--surface)] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[var(--accent)] transition-all"
-                  style={{ width: `${getCharCount(u.persona, 50000).percentage}%` }}
-                />
+              <div className="flex-1">
+                <div className="text-[14px] mb-1 txt-accent">设为小号</div>
+                <div className="text-[11px] txt-faint">用于匿名接触角色，不暴露正式身份</div>
               </div>
-            </div>
-          )}
+            </label>
+          </div>
 
-          {/* 世界书 */}
-          {activeTab === 'worldbook' && (
-            <div className="glass-strong rounded-2xl p-4">
-              <div className="text-[13px] font-medium mb-2 txt-accent flex items-center justify-between">
-                <span>个人世界书</span>
-                <span
-                  className="text-[11px]"
-                  style={{ color: getCharCount(u.worldbook, 50000).color }}
-                >
-                  {getCharCount(u.worldbook, 50000).count} / 50,000
-                </span>
-              </div>
-              <div className="text-[11px] txt-faint mb-3">
-                记录你的世界观、背景设定、关键信息等。这些内容会在相关时被引用。支持最多50,000字符。
-              </div>
-              <textarea
-                value={u.worldbook || ''}
-                onChange={(e) => setU({ ...u, worldbook: e.target.value })}
-                placeholder="例如：我生活在2024年的上海，从事AI行业。我有一个创业公司..."
-                rows={15}
-                maxLength={50000}
-                className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
-              />
-              <div className="mt-2 h-2 bg-[var(--surface)] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[var(--accent)] transition-all"
-                  style={{ width: `${getCharCount(u.worldbook, 50000).percentage}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Chat人设 */}
-          {activeTab === 'chat' && (
-            <div className="glass-strong rounded-2xl p-4">
-              <div className="text-[13px] font-medium mb-2 txt-accent flex items-center justify-between">
-                <span>Chat专用人设</span>
-                <span
-                  className="text-[11px]"
-                  style={{ color: getCharCount(u.chatPersona, 20000).color }}
-                >
-                  {getCharCount(u.chatPersona, 20000).count} / 20,000
-                </span>
-              </div>
-              <div className="text-[11px] txt-faint mb-3">
-                专门用于聊天时的人设，会覆盖通用人设。适合设置聊天风格、说话习惯等。支持最多20,000字符。
-              </div>
-              <textarea
-                value={u.chatPersona || ''}
-                onChange={(e) => setU({ ...u, chatPersona: e.target.value })}
-                placeholder="例如：聊天时我喜欢用emoji，说话比较幽默轻松..."
-                rows={12}
-                maxLength={20000}
-                className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
-              />
-              <div className="mt-2 h-2 bg-[var(--surface)] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[var(--accent)] transition-all"
-                  style={{ width: `${getCharCount(u.chatPersona, 20000).percentage}%` }}
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {err && (
-          <div className="text-[12px] text-[var(--danger)] mb-2 text-center p-2 glass-strong rounded-lg">{err}</div>
+          <div className="text-[12px] text-[var(--danger)] mb-2 text-center p-2 glass-strong rounded-lg mt-4">{err}</div>
         )}
       </div>
 
