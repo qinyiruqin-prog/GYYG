@@ -1,117 +1,16 @@
 import { ComingSoonV3 } from '../components/ComingSoonV3';
 export { OfflineModeScreen } from './OfflineModeScreen';
+export { GroupChatScreen } from './GroupChatScreen';
+export { PhoneCheckScreen } from './PhoneCheckScreen';
+export { CoupleSpaceScreen } from './CoupleSpaceScreen';
+export { HomeSystemScreen } from './HomeSystemScreen';
+export { AnniversaryScreen } from './AnniversaryScreen';
+export { TurtleSoupScreen } from './TurtleSoupScreen';
+export { GamesScreen } from './GamesScreen';
 
-// 群聊
-export function GroupChatScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="群聊"
-      icon="👥"
-      description="创建多人聊天群，与多个AI角色同时互动"
-      features={[
-        '创建群聊，添加多个用户和角色',
-        '群名称、群头像自定义',
-        '@提及功能，精准回复',
-        '群消息实时同步',
-        '角色之间会互相对话',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
-
-// 查手机
-export function PhoneCheckScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="查手机"
-      icon="🔍"
-      description="偷偷查看角色的聊天记录、朋友圈和相册，有被发现的风险哦"
-      features={[
-        '查看角色的聊天记录',
-        '浏览角色的朋友圈',
-        '查看角色的相册',
-        '有概率被角色发现',
-        'AI生成角色的真实反应',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
-
-// 线下模式已经从单独的文件导出了
-
-export function CoupleSpaceScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="情侣空间"
-      icon="💑"
-      description="专属的情侣空间，记录你们的美好时光"
-      features={[
-        'AI生成情侣头像',
-        '情侣相册和时间轴',
-        '恋爱天数自动计算',
-        '锁手机功能（角色可以锁你的手机）',
-        '纪念日提醒',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
-
-export function HomeSystemScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="家园"
-      icon="🏠"
-      description="你和角色的温馨小家，可以一起做饭、换装、同居"
-      features={[
-        '厨房：做饭、分享美食',
-        '衣橱：换装、搭配服装',
-        '代收快递功能',
-        '房间装修和添加家具',
-        '与角色同居',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
-
-export function TurtleSoupScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="海龟汤"
-      icon="🐢"
-      description="经典推理游戏，和AI角色一起猜谜"
-      features={[
-        '海量谜题库',
-        '提问系统，AI智能回答',
-        '提示功能',
-        '难度分级',
-        '解谜记录和排行榜',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
-
-export function GamesScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="游戏"
-      icon="🎮"
-      description="和AI角色一起玩小游戏"
-      features={[
-        '麻将：经典国粹',
-        '斗地主：三人对战',
-        '更多小游戏持续更新',
-        '与角色对战',
-        '战绩记录',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
+// 所有核心v3.0功能已从单独文件导出
+// GroupChatScreen、PhoneCheckScreen、OfflineModeScreen、CoupleSpaceScreen、
+// HomeSystemScreen、AnniversaryScreen、TurtleSoupScreen、GamesScreen
 
 export function WeiboScreen({ onBack }: { onBack: () => void }) {
   return (
