@@ -1,4 +1,5 @@
 import { ComingSoonV3 } from '../components/ComingSoonV3';
+export { OfflineModeScreen } from './OfflineModeScreen';
 
 // 群聊
 export function GroupChatScreen({ onBack }: { onBack: () => void }) {
@@ -38,23 +39,7 @@ export function PhoneCheckScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-export function OfflineModeScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="线下模式"
-      icon="📍"
-      description="记录与角色的线下活动，让关系更真实"
-      features={[
-        '记录约会、电影、旅行等活动',
-        '添加照片和地点标记',
-        '心情记录和标签',
-        '活动时间轴',
-        '与角色的回忆相册',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
+// 线下模式已经从单独的文件导出了
 
 export function CoupleSpaceScreen({ onBack }: { onBack: () => void }) {
   return (
