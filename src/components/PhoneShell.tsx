@@ -407,6 +407,11 @@ export function PhoneShell({
           onBack={goHome}
         />
       );
+    // sheep路由：打开聊天列表
+    if (open === 'sheep') {
+      setOpen('chat');
+      return null;
+    }
     if (open === 'chat')
       return (
         <ChatScreen
