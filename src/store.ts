@@ -27,7 +27,27 @@ export const defaultSettings = (): AppSettings => ({
       // 第5页 - v3.0新功能B（8个图标）
       ['weibo', 'twitter', 'memory', 'weight', 'discover', 'alt_accounts', 'settings_v3', 'closet']
     ],
-    widgets: [],
+    widgets: [
+      // 第1页小部件
+      { id: 'weather-widget', type: 'weather', page: 0, position: { x: 0, y: 0 }, size: { w: 2, h: 1 } },
+      { id: 'calendar-widget', type: 'calendar', page: 0, position: { x: 2, y: 0 }, size: { w: 2, h: 1 } },
+
+      // 第2页小部件
+      { id: 'memo-widget', type: 'memo', page: 1, position: { x: 0, y: 0 }, size: { w: 2, h: 1 } },
+      { id: 'todo-widget', type: 'todo', page: 1, position: { x: 2, y: 0 }, size: { w: 2, h: 1 } },
+
+      // 第3页小部件
+      { id: 'clock-widget', type: 'clock', page: 2, position: { x: 0, y: 0 }, size: { w: 2, h: 1 } },
+      { id: 'battery-widget', type: 'battery', page: 2, position: { x: 2, y: 0 }, size: { w: 2, h: 1 } },
+
+      // 第4页小部件（v3.0新功能）
+      { id: 'music-widget', type: 'music', page: 3, position: { x: 0, y: 0 }, size: { w: 2, h: 1 } },
+      { id: 'shortcuts-widget', type: 'shortcuts', page: 3, position: { x: 2, y: 0 }, size: { w: 2, h: 1 } },
+
+      // 第5页小部件（统计和快捷）
+      { id: 'stats-widget', type: 'stats', page: 4, position: { x: 0, y: 0 }, size: { w: 2, h: 1 } },
+      { id: 'recent-widget', type: 'recent', page: 4, position: { x: 2, y: 0 }, size: { w: 2, h: 1 } },
+    ],
   },
   music: [],
   albumImages: [],

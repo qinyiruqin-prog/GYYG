@@ -71,11 +71,24 @@ export interface Partition {
 }
 
 /* ---------- Desktop layout ---------- */
-export type WidgetType = 'music' | 'calendar' | 'album';
+export type WidgetType =
+  | 'music'
+  | 'calendar'
+  | 'album'
+  | 'weather'
+  | 'memo'
+  | 'todo'
+  | 'clock'
+  | 'battery'
+  | 'shortcuts'
+  | 'stats'
+  | 'recent';
 export interface WidgetDef {
   id: ID;
   type: WidgetType;
   page: number;
+  position?: { x: number; y: number };
+  size?: { w: number; h: number };
 }
 export interface DesktopLayout {
   pages: ID[][];
