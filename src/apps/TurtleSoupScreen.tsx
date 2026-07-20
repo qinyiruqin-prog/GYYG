@@ -1,22 +1,21 @@
 import { useState } from 'react';
 import { AppScreen } from '../components/AppScreen';
-import { ListGroup, Row } from '../components/ui';
+import type { Character } from '../types';
 
 interface TurtleSoupScreenProps {
+  characters: Character[];
   onBack: () => void;
-  onAskQuestion: (puzzleId: string, question: string) => Promise<string>;
+  onStartPuzzle: (puzzleId: string, characterId: string, mode: 'you_guess' | 'char_guess') => void;
 }
 
 export interface TurtleSoupPuzzle {
   id: string;
   title: string;
   story: string; // 谜面
-  truth: string; // 真相（不显示给用户）
+  truth: string; // 真相
   difficulty: 'easy' | 'medium' | 'hard';
   category: 'horror' | 'funny' | 'logic' | 'emotional';
   hints: string[]; // 提示
-  questions: number; // 已经问了多少个问题
-  solved: boolean; // 是否已解开
 }
 
 const defaultPuzzles: TurtleSoupPuzzle[] = [
@@ -32,8 +31,6 @@ const defaultPuzzles: TurtleSoupPuzzle[] = [
       '那次经历和这次味道不一样',
       '那次经历中有人死了',
     ],
-    questions: 0,
-    solved: false,
   },
   {
     id: 'ts2',
@@ -47,8 +44,6 @@ const defaultPuzzles: TurtleSoupPuzzle[] = [
       '她出门前做了某件事',
       '她看到的东西和工作有关',
     ],
-    questions: 0,
-    solved: false,
   },
   {
     id: 'ts3',
@@ -62,8 +57,6 @@ const defaultPuzzles: TurtleSoupPuzzle[] = [
       '可以让别人帮忙',
       '把车给谁是关键',
     ],
-    questions: 0,
-    solved: false,
   },
   {
     id: 'ts4',
@@ -77,21 +70,15 @@ const defaultPuzzles: TurtleSoupPuzzle[] = [
       '女人的"姿势"有问题',
       '女人可能不是活着的',
     ],
-    questions: 0,
-    solved: false,
   },
 ];
 
-export function TurtleSoupScreen({ onBack, onAskQuestion }: TurtleSoupScreenProps) {
-  const [puzzles] = useState<TurtleSoupPuzzle[]>(defaultPuzzles);
+export function TurtleSoupScreen({ characters, onBack, onStartPuzzle }: TurtleSoupScreenProps) {
   const [selectedPuzzleId, setSelectedPuzzleId] = useState<string>('');
-  const [question, setQuestion] = useState('');
-  const [conversation, setConversation] = useState<{ q: string; a: string }[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showHints, setShowHints] = useState(false);
-  const [showTruth, setShowTruth] = useState(false);
+  const [selectedCharId, setSelectedCharId] = useState<string>('');
+  const [selectedMode, setSelectedMode] = useState<'you_guess' | 'char_guess' | ''>('');
 
-  const selectedPuzzle = puzzles.find(p => p.id === selectedPuzzleId);
+  const selectedPuzzle = defaultPuzzles.find(p => p.id === selectedPuzzleId);
 
   const difficultyLabels = {
     easy: '简单',
@@ -112,25 +99,12 @@ export function TurtleSoupScreen({ onBack, onAskQuestion }: TurtleSoupScreenProp
     emotional: '情感',
   };
 
-  const handleAsk = async () => {
-    if (!question.trim() || !selectedPuzzleId) return;
-
-    setLoading(true);
-    try {
-      const answer = await onAskQuestion(selectedPuzzleId, question);
-      setConversation([...conversation, { q: question, a: answer }]);
-      setQuestion('');
-    } catch (err) {
-      alert('提问失败，请重试');
-    } finally {
-      setLoading(false);
+  const handleStart = () => {
+    if (!selectedPuzzleId || !selectedCharId || !selectedMode) {
+      alert('请完成所有选择');
+      return;
     }
-  };
-
-  const handleGiveUp = () => {
-    if (confirm('确定要放弃并查看答案吗？')) {
-      setShowTruth(true);
-    }
+    onStartPuzzle(selectedPuzzleId, selectedCharId, selectedMode);
   };
 
   return (
@@ -141,17 +115,17 @@ export function TurtleSoupScreen({ onBack, onAskQuestion }: TurtleSoupScreenProp
           <div className="mb-4 p-4 glass-strong rounded-2xl">
             <div className="text-[13px] font-medium mb-2 txt-accent">🐢 海龟汤游戏</div>
             <div className="text-[12px] txt-faint space-y-1">
-              <div>• 经典推理游戏，通过提问猜出真相</div>
-              <div>• AI只会回答"是"、"否"、"不相关"</div>
-              <div>• 提示系统帮你找到方向</div>
-              <div>• 开动脑筋，享受推理的乐趣！</div>
+              <div>• 选择角色一起玩海龟汤</div>
+              <div>• 两种模式：你猜 或 角色猜</div>
+              <div>• 通过提问推理出真相</div>
+              <div>• 只能问"是/否"类型的问题</div>
             </div>
           </div>
 
           {/* 谜题列表 */}
           <div className="text-[13px] font-medium mb-2 txt-accent">选择谜题</div>
           <div className="space-y-2">
-            {puzzles.map(puzzle => (
+            {defaultPuzzles.map(puzzle => (
               <div
                 key={puzzle.id}
                 onClick={() => setSelectedPuzzleId(puzzle.id)}
@@ -170,15 +144,14 @@ export function TurtleSoupScreen({ onBack, onAskQuestion }: TurtleSoupScreenProp
                     </div>
                   </div>
                 </div>
-                <div className="text-[12px] txt-dim">{puzzle.story}</div>
+                <div className="text-[12px] txt-dim line-clamp-2">{puzzle.story}</div>
               </div>
             ))}
           </div>
         </>
-      ) : (
-        /* 游戏界面 */
+      ) : !selectedCharId ? (
+        /* 选择角色 */
         <div className="space-y-4">
-          {/* 谜题卡片 */}
           <div className="p-4 glass-strong rounded-2xl">
             <div className="flex items-start justify-between mb-3">
               <div>
@@ -195,12 +168,7 @@ export function TurtleSoupScreen({ onBack, onAskQuestion }: TurtleSoupScreenProp
                 </div>
               </div>
               <button
-                onClick={() => {
-                  setSelectedPuzzleId('');
-                  setConversation([]);
-                  setShowHints(false);
-                  setShowTruth(false);
-                }}
+                onClick={() => setSelectedPuzzleId('')}
                 className="text-[12px] txt-faint tap"
               >
                 返回
@@ -212,94 +180,164 @@ export function TurtleSoupScreen({ onBack, onAskQuestion }: TurtleSoupScreenProp
             </div>
           </div>
 
-          {/* 对话记录 */}
-          {conversation.length > 0 && (
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {conversation.map((c, i) => (
-                <div key={i} className="space-y-1">
-                  {/* 问题 */}
-                  <div className="flex justify-end">
-                    <div className="p-3 bg-[var(--accent)] text-white rounded-xl max-w-[80%]">
-                      <div className="text-[13px]">{c.q}</div>
+          <div className="text-[13px] font-medium mb-2 txt-accent">选择一起玩的角色</div>
+
+          {characters.length > 0 ? (
+            <div className="space-y-2">
+              {characters.map(char => (
+                <button
+                  key={char.id}
+                  onClick={() => setSelectedCharId(char.id)}
+                  className="w-full p-4 glass-strong rounded-2xl tap flex items-center gap-3 text-left"
+                >
+                  <div className="text-[40px]">{char.avatar || '👤'}</div>
+                  <div className="flex-1">
+                    <div className="text-[14px] txt-accent font-medium mb-1">
+                      {char.name}
+                    </div>
+                    <div className="text-[12px] txt-faint line-clamp-1">
+                      {char.signature}
                     </div>
                   </div>
-                  {/* 回答 */}
-                  <div className="flex justify-start">
-                    <div className="p-3 glass-strong rounded-xl max-w-[80%]">
-                      <div className="text-[13px] txt-accent">{c.a}</div>
-                    </div>
-                  </div>
-                </div>
+                  <div className="text-[20px] txt-faint">→</div>
+                </button>
               ))}
             </div>
-          )}
-
-          {/* 提问输入 */}
-          {!showTruth && (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={question}
-                  onChange={e => setQuestion(e.target.value)}
-                  onKeyPress={e => e.key === 'Enter' && handleAsk()}
-                  placeholder="输入你的问题..."
-                  disabled={loading}
-                  className="flex-1 p-3 glass-strong rounded-xl text-[14px] txt-accent border-none outline-none disabled:opacity-50"
-                />
-                <button
-                  onClick={handleAsk}
-                  disabled={loading || !question.trim()}
-                  className="px-4 py-3 bg-[var(--accent)] text-white rounded-xl font-medium tap disabled:opacity-50"
-                >
-                  {loading ? '...' : '提问'}
-                </button>
-              </div>
-
-              <div className="text-[11px] txt-faint text-center">
-                提示：只能问"是/否"类型的问题
-              </div>
+          ) : (
+            <div className="p-8 text-center">
+              <div className="text-[48px] mb-2">👤</div>
+              <div className="text-[14px] txt-dim mb-1">还没有角色</div>
+              <div className="text-[12px] txt-faint">请先创建角色</div>
             </div>
           )}
-
-          {/* 功能按钮 */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowHints(!showHints)}
-              className="flex-1 py-3 glass-strong rounded-xl font-medium tap txt-accent"
-            >
-              {showHints ? '隐藏提示' : '💡 查看提示'}
-            </button>
-            <button
-              onClick={handleGiveUp}
-              className="flex-1 py-3 glass-strong rounded-xl font-medium tap txt-accent"
-            >
-              🏳️ 放弃并查看答案
-            </button>
+        </div>
+      ) : !selectedMode ? (
+        /* 选择模式 */
+        <div className="space-y-4">
+          <div className="p-4 glass-strong rounded-2xl">
+            <div className="text-[14px] txt-accent font-medium mb-2">
+              {selectedPuzzle?.title}
+            </div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="text-[40px]">
+                {characters.find(c => c.id === selectedCharId)?.avatar || '👤'}
+              </div>
+              <div className="flex-1">
+                <div className="text-[14px] txt-accent font-medium">
+                  {characters.find(c => c.id === selectedCharId)?.name}
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* 提示 */}
-          {showHints && selectedPuzzle && (
-            <div className="p-4 glass-strong rounded-2xl">
-              <div className="text-[13px] font-medium mb-2 txt-accent">💡 提示</div>
-              <div className="space-y-1">
-                {selectedPuzzle.hints.map((hint, i) => (
-                  <div key={i} className="text-[12px] txt-faint flex gap-2">
-                    <span>{i + 1}.</span>
-                    <span>{hint}</span>
-                  </div>
-                ))}
+          <div className="text-[13px] font-medium mb-2 txt-accent">选择游戏模式</div>
+
+          <button
+            onClick={() => setSelectedMode('you_guess')}
+            className="w-full p-4 glass-strong rounded-2xl tap text-left"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="text-[32px]">🤔</div>
+              <div className="flex-1">
+                <div className="text-[14px] txt-accent font-medium mb-1">
+                  你来猜谜
+                </div>
+                <div className="text-[12px] txt-faint">
+                  角色知道答案，你通过提问猜出真相
+                </div>
               </div>
             </div>
-          )}
-
-          {/* 真相 */}
-          {showTruth && selectedPuzzle && (
-            <div className="p-4 bg-[var(--accent)]/10 border-2 border-[var(--accent)]/30 rounded-2xl">
-              <div className="text-[13px] font-medium mb-2 txt-accent">✨ 真相</div>
-              <div className="text-[13px] txt-accent">{selectedPuzzle.truth}</div>
+            <div className="text-[11px] txt-faint">
+              • 角色会回答"是"、"否"或"不相关"<br/>
+              • 你可以随时要提示<br/>
+              • 猜到真相即可获胜
             </div>
-          )}
+          </button>
+
+          <button
+            onClick={() => setSelectedMode('char_guess')}
+            className="w-full p-4 glass-strong rounded-2xl tap text-left"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="text-[32px]">🧐</div>
+              <div className="flex-1">
+                <div className="text-[14px] txt-accent font-medium mb-1">
+                  角色来猜谜
+                </div>
+                <div className="text-[12px] txt-faint">
+                  你知道答案，角色通过提问猜出真相
+                </div>
+              </div>
+            </div>
+            <div className="text-[11px] txt-faint">
+              • 你回答角色的问题"是"或"否"<br/>
+              • 角色会根据答案推理<br/>
+              • 看角色能否猜出真相
+            </div>
+          </button>
+
+          <button
+            onClick={() => setSelectedCharId('')}
+            className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent"
+          >
+            重新选择角色
+          </button>
+        </div>
+      ) : (
+        /* 确认开始 */
+        <div className="space-y-4">
+          <div className="p-4 glass-strong rounded-2xl">
+            <div className="text-[14px] txt-accent font-medium mb-3">游戏设置</div>
+
+            <div className="space-y-3">
+              <div>
+                <div className="text-[12px] txt-faint mb-1">谜题</div>
+                <div className="text-[13px] txt-accent">{selectedPuzzle?.title}</div>
+              </div>
+
+              <div>
+                <div className="text-[12px] txt-faint mb-1">游戏伙伴</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[24px]">
+                    {characters.find(c => c.id === selectedCharId)?.avatar || '👤'}
+                  </div>
+                  <div className="text-[13px] txt-accent">
+                    {characters.find(c => c.id === selectedCharId)?.name}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[12px] txt-faint mb-1">游戏模式</div>
+                <div className="text-[13px] txt-accent">
+                  {selectedMode === 'you_guess' ? '🤔 你来猜谜' : '🧐 角色来猜谜'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl">
+            <div className="text-[12px] txt-accent space-y-1">
+              <div>💡 <strong>游戏规则：</strong></div>
+              <div>• 只能问"是/否"类型的问题</div>
+              <div>• 通过提问推理出真相</div>
+              <div>• 游戏过程会保存到聊天记录</div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleStart}
+            className="w-full py-4 bg-[var(--accent)] text-white rounded-xl font-medium tap text-[16px]"
+          >
+            🐢 开始游戏
+          </button>
+
+          <button
+            onClick={() => setSelectedMode('')}
+            className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent"
+          >
+            重新选择模式
+          </button>
         </div>
       )}
     </AppScreen>
