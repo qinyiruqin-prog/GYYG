@@ -21,7 +21,7 @@ export const APPS: AppMeta[] = [
   { id: 'xiaohongshu',  name: '小红书',  icon: 'BookHeart',        available: true },
   { id: 'novel',        name: '小说',    icon: 'BookOpen',         available: true },
   { id: 'shop',         name: '商城',    icon: 'ShoppingBag',      available: true },
-  { id: 'me',           name: '我的',    icon: 'UserRound',        available: true },
+  { id: 'me',           name: '我的',    icon: 'UserRound',        available: true }, // 保留用于兼容性
   { id: 'forum',        name: '论坛',    icon: 'MessagesSquare',   available: true },
   { id: 'chat',         name: '聊天',    icon: 'MessageCircle',    available: true },
   { id: 'calendar',     name: '日历',    icon: 'CalendarDays',     available: true },
@@ -56,7 +56,7 @@ export const APPS: AppMeta[] = [
   { id: 'weight',         name: '体重管理',   icon: 'Scale',          available: true, emoji: '⚖️' },
   { id: 'discover',       name: '发现',       icon: 'Sparkles',       available: true, emoji: '✨' },
   { id: 'alt_accounts',   name: '小号',       icon: 'Users',          available: true, emoji: '👤' },
-  { id: 'settings_v3',    name: 'v3.0设置',   icon: 'Settings',       available: true, emoji: '⚙️' },
+  { id: 'settings_v3',    name: '设置',       icon: 'Settings',       available: true, emoji: '⚙️' }, // 合并了"我的"和"设置"功能
 
   // 快捷球
   { id: 'sheep',        name: '羊羊',    icon: '',                 available: true, shortcutBall: true, emoji: '🐑' },

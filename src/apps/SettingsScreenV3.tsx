@@ -4,12 +4,17 @@ import { ListGroup, Row } from '../components/ui';
 export function SettingsScreenV3({
   innerThoughtOpacity = 0.7,
   swipeBackEnabled = true,
-  floatingBallEnabled = false,
+  floatingBallEnabled = true, // 默认开启悬浮球
   autoSaveCharImages = true,
   offlineMode = false,
   enableVectorMemory = false,
   onUpdateSetting,
   onBack,
+  onOpenIdentities,
+  onOpenApiConfig,
+  onOpenThemes,
+  onExport,
+  onImport,
 }: {
   innerThoughtOpacity?: number;
   swipeBackEnabled?: boolean;
@@ -19,11 +24,56 @@ export function SettingsScreenV3({
   enableVectorMemory?: boolean;
   onUpdateSetting: (key: string, value: any) => void;
   onBack: () => void;
+  onOpenIdentities?: () => void;
+  onOpenApiConfig?: () => void;
+  onOpenThemes?: () => void;
+  onExport?: () => void;
+  onImport?: () => void;
 }) {
   return (
-    <AppScreen title="v3.0 新功能设置" onBack={onBack}>
+    <AppScreen title="设置" onBack={onBack}>
+      {/* 用户信息（整合"我的"功能） */}
+      <div className="text-[13px] font-medium mb-2 txt-accent">我的账号</div>
+      <ListGroup>
+        <Row
+          label="身份管理"
+          hint="管理用户身份和人设"
+          icon="👤"
+          onClick={onOpenIdentities}
+        />
+        <Row
+          label="API 配置"
+          hint="配置聊天、语音、图片API"
+          icon="🔑"
+          onClick={onOpenApiConfig}
+        />
+        <Row
+          label="主题设置"
+          hint="更换主题颜色"
+          icon="🎨"
+          onClick={onOpenThemes}
+        />
+      </ListGroup>
+
+      {/* 数据管理 */}
+      <div className="text-[13px] font-medium mb-2 mt-4 txt-accent">数据管理</div>
+      <ListGroup>
+        <Row
+          label="导出数据"
+          hint="导出所有数据到JSON文件"
+          icon="💾"
+          onClick={onExport}
+        />
+        <Row
+          label="导入数据"
+          hint="从JSON文件导入数据"
+          icon="📂"
+          onClick={onImport}
+        />
+      </ListGroup>
+
       {/* 显示设置 */}
-      <div className="text-[13px] font-medium mb-2 txt-accent">显示设置</div>
+      <div className="text-[13px] font-medium mb-2 mt-4 txt-accent">显示设置</div>
       <ListGroup>
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-2">
@@ -111,7 +161,7 @@ export function SettingsScreenV3({
       <ListGroup>
         <Row
           label="线下模式"
-          hint="记录与角色的线下活动"
+          hint="记录与角色的线下活动，线上线下记忆互通"
           right={
             <input
               type="checkbox"
@@ -144,6 +194,8 @@ export function SettingsScreenV3({
           <div>✅ 无限小号：User和Character都可创建无限小号</div>
           <div>✅ 完整导入：支持导入人设、世界书到JSON</div>
           <div>✅ 心声透明度：可自由调节透明度</div>
+          <div>✅ 悬浮球：可拖动的快捷操作球</div>
+          <div>✅ 线上/线下模式：微信聊天+现实见面，记忆互通</div>
           <div>🔨 群聊功能：多人聊天（开发中）</div>
           <div>🔨 查手机：查看角色聊天记录（开发中）</div>
           <div>🔨 情侣空间：生成情头、锁手机（开发中）</div>
@@ -156,7 +208,7 @@ export function SettingsScreenV3({
       <div className="mt-4 p-4 glass-strong rounded-2xl text-center">
         <div className="text-[13px] font-medium mb-1">羊羊机 v3.0</div>
         <div className="text-[11px] txt-faint">史诗级更新 · 30+新功能</div>
-        <div className="text-[11px] txt-faint mt-2">基础架构完成度：35%</div>
+        <div className="text-[11px] txt-faint mt-2">基础架构完成度：45%</div>
       </div>
     </AppScreen>
   );

@@ -110,6 +110,7 @@ export interface Character {
 }
 
 /* ---------- Chat ---------- */
+export type InteractionMode = 'online' | 'offline'; // 线上=微信聊天，线下=模拟现实见面
 export type MessageMedia =
   | { kind: 'image'; url: string }
   | { kind: 'voice'; url: string; duration?: number; text?: string };
@@ -123,6 +124,7 @@ export interface ChatMessage {
   // v3.0 新增
   deliveryOrder?: DeliveryOrder; // 外卖代付订单
   senderAltId?: ID; // 发送者小号ID（支持用户/角色切换小号发消息）
+  mode?: InteractionMode; // 消息的交互模式（线上/线下）
 }
 export interface ChatThread {
   id: ID;
@@ -139,6 +141,8 @@ export interface ChatThread {
   groupAvatar?: string; // 群头像
   onlineStatus?: 'online' | 'offline' | 'busy'; // 在线状态（查手机功能）
   isChecking?: boolean; // 是否正在被查手机
+  interactionMode?: InteractionMode; // 当前会话的交互模式（默认online）
+  sharedMemory: ChatMessage[]; // 线上线下共享的记忆（两种模式互通）
 }
 
 /* ---------- Friend Request (好友申请) ---------- */
