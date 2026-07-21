@@ -671,7 +671,19 @@ export function PhoneShell({
     if (open === 'memory') return <MemoryScreen onBack={goHome} />;
     if (open === 'weight') return <WeightManageScreen onBack={goHome} />;
     if (open === 'discover') return <DiscoverScreen onBack={goHome} />;
-    if (open === 'alt_accounts') return <AltAccountsScreen onBack={goHome} />;
+    if (open === 'alt_accounts')
+      return (
+        <AltAccountsScreen
+          onBack={goHome}
+          users={settings.users}
+          activeUserId={settings.activeUserId}
+          onSwitch={(userId) => {
+            updateSettings({ activeUserId: userId });
+            goHome();
+          }}
+          onCreate={() => setOpen('me')}
+        />
+      );
 
     return <ComingSoon appId={open} onBack={goHome} />;
   };

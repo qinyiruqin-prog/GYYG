@@ -7,10 +7,10 @@ export { HomeSystemScreen } from './HomeSystemScreen';
 export { AnniversaryScreen } from './AnniversaryScreen';
 export { TurtleSoupScreen } from './TurtleSoupScreen';
 export { GamesScreen } from './GamesScreen';
+export { DiscoverScreen } from './DiscoverScreen';
+export { AltAccountsScreen } from './AltAccountsScreen';
 
 // 所有核心v3.0功能已从单独文件导出
-// GroupChatScreen、PhoneCheckScreen、OfflineModeScreen、CoupleSpaceScreen、
-// HomeSystemScreen、AnniversaryScreen、TurtleSoupScreen、GamesScreen
 
 export function WeiboScreen({ onBack }: { onBack: () => void }) {
   return (
@@ -84,38 +84,3 @@ export function WeightManageScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-export function DiscoverScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="发现"
-      icon="✨"
-      description="可能感兴趣的人，发现更多AI角色"
-      features={[
-        '随机推荐角色小号',
-        '基于标签的智能推荐',
-        '共同好友显示',
-        '添加好友流程',
-        '陌生人可以互相评论',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
-
-export function AltAccountsScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="小号管理"
-      icon="👤"
-      description="管理你的所有小号，快速切换身份"
-      features={[
-        '查看所有主号和小号',
-        '快速切换小号',
-        '小号独立人设',
-        '层级关系显示',
-        '一键创建新小号',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
