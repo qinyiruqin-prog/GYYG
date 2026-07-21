@@ -74,7 +74,25 @@ export function Desktop({
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!swiping.current) return;
+    // 如果正在拖拽图标
+    if (edit && isDragging.current && dragId) {
+      dragCurrentPos.current = { x: e.clientX, y: e.clientY };
+      setDragPos({ x: e.clientX, y: e.clientY });
+
+      // 检测边缘，自动切换页面
+      const screenWidth = window.innerWidth;
+      const edgeThreshold = 50;
+
+      if (e.clientX < edgeThreshold && page > 0) {
+        setPage(page - 1);
+      } else if (e.clientX > screenWidth - edgeThreshold && page < maxPage) {
+        setPage(page + 1);
+      }
+      return;
+    }
+
+    // 滑动翻页
+    if (!swiping.current || isDragging.current) return;
     const dx = e.clientX - touchStartX.current;
     const dy = e.clientY - touchStartY.current;
     if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
@@ -98,11 +116,16 @@ export function Desktop({
   };
 
   /* ---- drag reorder (pointer based) ---- */
-  const startLongPress = (appId: string) => {
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const dragCurrentPos = useRef<{ x: number; y: number } | null>(null);
+
+  const startLongPress = (appId: string, e: React.PointerEvent) => {
     longPressTarget.current = appId;
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
     longPressTimer.current = setTimeout(() => {
       if (longPressTarget.current === appId) {
         setEdit(true);
+        isDragging.current = false;
         // 添加震动反馈（如果设备支持）
         if (navigator.vibrate) {
           navigator.vibrate(50);
@@ -117,35 +140,82 @@ export function Desktop({
       longPressTimer.current = null;
     }
     longPressTarget.current = null;
+    dragStartPos.current = null;
   };
 
-  const onIconPointerDown = (appId: string) => {
+  const onIconPointerDown = (appId: string, e: React.PointerEvent) => {
     if (edit) {
       // 已经在编辑模式，直接开始拖拽
       setDragId(appId);
+      isDragging.current = true;
+      dragStartPos.current = { x: e.clientX, y: e.clientY };
+      dragCurrentPos.current = { x: e.clientX, y: e.clientY };
+      setDragPos({ x: e.clientX, y: e.clientY });
     } else {
       // 不在编辑模式，开始长按检测
-      startLongPress(appId);
+      startLongPress(appId, e);
     }
   };
+
+  const onIconPointerMove = (e: React.PointerEvent) => {
+    if (edit && isDragging.current && dragId) {
+      dragCurrentPos.current = { x: e.clientX, y: e.clientY };
+      setDragPos({ x: e.clientX, y: e.clientY });
+
+      // 检测边缘，自动切换页面
+      const screenWidth = window.innerWidth;
+      const edgeThreshold = 50;
+
+      if (e.clientX < edgeThreshold && page > 0) {
+        setPage(page - 1);
+      } else if (e.clientX > screenWidth - edgeThreshold && page < maxPage) {
+        setPage(page + 1);
+      }
+    }
+  };
+
   const onIconPointerEnter = (appId: string) => {
     if (!edit || !dragId || dragId === appId) return;
     dragOverId.current = appId;
-    // swap positions immediately for visual feedback
-    const arr = pages[page] ?? [];
-    const from = arr.indexOf(dragId);
-    const to = arr.indexOf(appId);
-    if (from >= 0 && to >= 0 && from !== to) {
+
+    // 查找拖拽源和目标所在的页面
+    let fromPage = -1;
+    let toPage = -1;
+
+    pages.forEach((p, idx) => {
+      if (p.includes(dragId)) fromPage = idx;
+      if (p.includes(appId)) toPage = idx;
+    });
+
+    if (fromPage >= 0 && toPage >= 0) {
       const next = pages.map((p) => [...p]);
-      const [moved] = next[page].splice(from, 1);
-      next[page].splice(to, 0, moved);
+
+      // 从原页面移除
+      const fromArr = next[fromPage];
+      const fromIdx = fromArr.indexOf(dragId);
+      if (fromIdx >= 0) {
+        fromArr.splice(fromIdx, 1);
+      }
+
+      // 插入到目标页面
+      const toArr = next[toPage];
+      const toIdx = toArr.indexOf(appId);
+      if (toIdx >= 0) {
+        toArr.splice(toIdx, 0, dragId);
+      }
+
       onChangeLayout({ ...layout, pages: next });
     }
   };
+
   const onIconPointerUp = () => {
     cancelLongPress();
     setDragId(null);
+    setDragPos(null);
     dragOverId.current = null;
+    isDragging.current = false;
+    dragStartPos.current = null;
+    dragCurrentPos.current = null;
   };
 
   const removeApp = (appId: string) => {
@@ -300,22 +370,55 @@ export function Desktop({
 
       {edit && removedIds.length > 0 && (
         <div className="absolute bottom-[120px] inset-x-4 glass-strong rounded-2xl p-3 z-30 animate-sheet-up">
-          <div className="text-[11px] txt-dim mb-2">点按添加回桌面</div>
+          <div className="text-[11px] txt-dim mb-2">拖动添加回桌面</div>
           <div className="flex gap-2 flex-wrap">
             {removedIds.map((id) => (
-              <AppIcon
+              <div
                 key={id}
-                appId={id}
-                size="sm"
-                onOpen={() => {
-                  const next = pages.map((p) => [...p]);
-                  if (!next[page]) next[page] = [];
-                  next[page].push(id);
-                  onChangeLayout({ ...layout, pages: next });
-                }}
-              />
+                onPointerDown={(e) => onIconPointerDown(id, e)}
+                onPointerEnter={() => onIconPointerEnter(id)}
+                onPointerUp={onIconPointerUp}
+                className={cls(
+                  dragId === id && 'opacity-30 scale-95',
+                  'cursor-move',
+                )}
+              >
+                <AppIcon
+                  appId={id}
+                  size="sm"
+                  onOpen={() => {
+                    const next = pages.map((p) => [...p]);
+                    if (!next[page]) next[page] = [];
+                    next[page].push(id);
+                    onChangeLayout({ ...layout, pages: next });
+                  }}
+                  jiggle={edit}
+                  onLongPress={() => {}}
+                />
+              </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* 拖拽中的浮动图标 */}
+      {dragId && dragPos && (
+        <div
+          className="fixed pointer-events-none z-50"
+          style={{
+            left: dragPos.x,
+            top: dragPos.y,
+            transform: 'translate(-50%, -50%) scale(1.2)',
+            opacity: 0.9,
+          }}
+        >
+          <AppIcon
+            appId={dragId}
+            size="md"
+            onOpen={() => {}}
+            jiggle={false}
+            showLabel={false}
+          />
         </div>
       )}
     </div>
@@ -336,7 +439,7 @@ function Page1({
   edit: boolean;
   dragId: string | null;
   onOpenApp: (id: string) => void;
-  onIconDown: (id: string) => void;
+  onIconDown: (id: string, e: React.PointerEvent) => void;
   onIconEnter: (id: string) => void;
   onIconUp: () => void;
   removeApp: (id: string) => void;
@@ -361,7 +464,7 @@ function Page2({
   dragId: string | null;
   onOpenApp: (id: string) => void;
   onShortcut: (a: ShortcutAction) => void;
-  onIconDown: (id: string) => void;
+  onIconDown: (id: string, e: React.PointerEvent) => void;
   onIconEnter: (id: string) => void;
   onIconUp: () => void;
   removeApp: (id: string) => void;
@@ -382,7 +485,7 @@ function IconGrid({
   edit: boolean;
   dragId: string | null;
   onOpenApp: (id: string) => void;
-  onIconDown: (id: string) => void;
+  onIconDown: (id: string, e: React.PointerEvent) => void;
   onIconEnter: (id: string) => void;
   onIconUp: () => void;
   removeApp: (id: string) => void;
@@ -392,7 +495,7 @@ function IconGrid({
       {ids.map((appId) => (
         <div
           key={appId}
-          onPointerDown={() => onIconDown(appId)}
+          onPointerDown={(e) => onIconDown(appId, e)}
           onPointerEnter={() => onIconEnter(appId)}
           onPointerUp={onIconUp}
           className={cls(
@@ -431,7 +534,7 @@ function Page3({
   edit: boolean;
   dragId: string | null;
   onOpenApp: (id: string) => void;
-  onIconDown: (id: string) => void;
+  onIconDown: (id: string, e: React.PointerEvent) => void;
   onIconEnter: (id: string) => void;
   onIconUp: () => void;
   removeApp: (id: string) => void;
