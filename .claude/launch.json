@@ -5,13 +5,15 @@
       "name": "vite-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "port": 3000,
+      "autoPort": true
     },
     {
       "name": "vite-preview",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "preview"],
-      "port": 4173
+      "port": 4173,
+      "autoPort": true
     }
   ]
 }

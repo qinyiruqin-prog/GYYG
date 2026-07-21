@@ -84,18 +84,34 @@ export function AssistantScreen({ api, onBack }: { api: ApiConfig; onBack: () =>
 async function callChat(chat: ApiConfig['chat'], history: Msg[]): Promise<string> {
   if (!chat.baseUrl) throw new Error('未配置 Chat API');
   const base = chat.baseUrl.replace(/\/+$/, '');
-  const res = await fetch(`${base}/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${chat.apiKey}` },
-    body: JSON.stringify({
-      model: chat.model || 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: '你是「羊羊助手」，羊羊机（一个网页版手机风格 AI 角色聊天系统）的内置帮助助手。你对羊羊机的功能了如指掌，专门解答用户关于羊羊机使用方法的问题。\n\n羊羊机的主要功能模块包括：\n- 桌面框架：仿手机桌面，多页滑动、小组件（音乐/日历/相册）、快捷方式球\n- API 配置中心：配置 Chat/语音/绘图 三类 OpenAI 兼容接口，支持「拉取」按钮自动获取可用模型列表\n- API 预设：保存多套 API 配置一键切换\n- 主题：水墨黑白等多种主题可切换\n- 用户身份：创建多个身份（含头像、签名、绘图模板），可设主副号\n- 分区与对应关系：将用户与角色分组管理\n- 本地资源：导入本地音乐和图片\n- 数据备份：导出/导入全部数据\n- 通讯录：管理联系人，可关联 AI 角色，发起聊天或短信\n- 聊天 / 短信：与 AI 角色对话，支持短信模式\n- 朋友圈 / 小红书 / 论坛 / 广场：AI 生成内容的社交场景\n- 小说：阅读小说并记录进度\n- 商城 / 外卖：模拟购物与点餐\n- 世界书：配置关键词触发的世界观设定，聊天中自动注入\n- 音乐 / 相册：本地资源播放与浏览\n\n回答要精炼友好，用中文。如果用户问的不是羊羊机相关问题，可以简短引导回羊羊机话题。' },
-        ...history.map((m) => ({ role: m.role, content: m.content })),
-      ],
-    }),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? '(空回复)';
+
+  try {
+    const res = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${chat.apiKey}`
+      },
+      body: JSON.stringify({
+        model: chat.model || 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: '你是「羊羊助手」，羊羊机（一个网页版手机风格 AI 角色聊天系统）的内置帮助助手。你对羊羊机的功能了如指掌，专门解答用户关于羊羊机使用方法的问题。\n\n羊羊机的主要功能模块包括：\n- 桌面框架：仿手机桌面，多页滑动、小组件（音乐/日历/相册）、快捷方式球\n- API 配置中心：配置 Chat/语音/绘图 三类 OpenAI 兼容接口，支持「拉取」按钮自动获取可用模型列表\n- API 预设：保存多套 API 配置一键切换\n- 主题：水墨黑白等多种主题可切换\n- 用户身份：创建多个身份（含头像、签名、绘图模板），可设主副号\n- 分区与对应关系：将用户与角色分组管理\n- 本地资源：导入本地音乐和图片\n- 数据备份：导出/导入全部数据\n- 通讯录：管理联系人，可关联 AI 角色，发起聊天或短信\n- 聊天 / 短信：与 AI 角色对话，支持短信模式\n- 朋友圈 / 小红书 / 论坛 / 广场：AI 生成内容的社交场景\n- 小说：阅读小说并记录进度\n- 商城 / 外卖：模拟购物与点餐\n- 世界书：配置关键词触发的世界观设定，聊天中自动注入\n- 音乐 / 相册：本地资源播放与浏览\n\n回答要精炼友好，用中文。如果用户问的不是羊羊机相关问题，可以简短引导回羊羊机话题。' },
+          ...history.map((m) => ({ role: m.role, content: m.content })),
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => '未知错误');
+      throw new Error(`API请求失败 (HTTP ${res.status}): ${errorText}`);
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content ?? '(空回复)';
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('网络连接失败，请检查API地址是否正确或网络是否正常');
+    }
+    throw error;
+  }
 }
