@@ -268,27 +268,83 @@ function VinylPhotoWidget({ music, album, playing, currentName, onTogglePlay }: 
           {playing ? <Pause size={11} /> : <Play size={11} />} {playing ? '暂停' : '播放'}
         </button>
       </div>
-      {/* photo — polaroid style, slightly tilted */}
+      {/* photo — 拍立得风格 */}
       <div className="flex-1 flex flex-col items-center justify-center min-h-[130px]">
         {album.length > 0 ? (
           <>
             <div
-              className="w-full max-w-[150px] bg-white/90 rounded-[10px] p-1.5 pb-5 mb-2 shadow-lg"
-              style={{ transform: 'rotate(-3deg)' }}
+              className="relative"
+              style={{ transform: 'rotate(-4deg)' }}
             >
-              <img src={album[0].url} alt="" className="w-full aspect-square object-cover rounded-[6px]" />
+              {/* 拍立得相框 */}
+              <div
+                className="w-full max-w-[140px] bg-white rounded-[4px] shadow-2xl"
+                style={{
+                  padding: '8px 8px 28px 8px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
+                }}
+              >
+                {/* 照片 */}
+                <img
+                  src={album[0].url}
+                  alt=""
+                  className="w-full aspect-square object-cover"
+                  style={{
+                    boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+                  }}
+                />
+                {/* 拍立得底部标签区域 */}
+                <div className="absolute bottom-2 left-0 right-0 text-center">
+                  <div
+                    className="text-[9px] font-handwriting text-gray-600"
+                    style={{
+                      fontFamily: "'Ma Shan Zheng', cursive",
+                      opacity: 0.6,
+                    }}
+                  >
+                    memories
+                  </div>
+                </div>
+              </div>
+              {/* 胶带装饰 */}
+              <div
+                className="absolute -top-1 left-1/2 -translate-x-1/2 w-16 h-3 opacity-40"
+                style={{
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6) 10%, rgba(255,255,255,0.6) 90%, transparent)',
+                  backdropFilter: 'blur(1px)',
+                  transform: 'translateX(-50%) rotate(2deg)',
+                }}
+              />
             </div>
-            <div className="flex items-center gap-1 text-[11px] txt-faint">
-              <ImageIcon size={11} /> memories
+            <div className="flex items-center gap-1 text-[10px] txt-faint mt-2">
+              <ImageIcon size={10} /> 相册
             </div>
           </>
         ) : (
           <div
-            className="w-full max-w-[150px] bg-white/90 rounded-[10px] p-1.5 pb-5 mb-2 shadow-lg flex flex-col items-center justify-center gap-1 aspect-[1/1.15]"
-            style={{ transform: 'rotate(-3deg)' }}
+            className="relative"
+            style={{ transform: 'rotate(-4deg)' }}
           >
-            <Camera size={20} className="txt-faint" />
-            <div className="text-[10px] txt-faint">点击上传照片</div>
+            {/* 空拍立得 */}
+            <div
+              className="w-full max-w-[140px] bg-white rounded-[4px] shadow-2xl flex flex-col items-center justify-center aspect-[1/1.25]"
+              style={{
+                padding: '8px 8px 28px 8px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
+              }}
+            >
+              <Camera size={24} className="text-gray-300 mb-1" />
+              <div className="text-[10px] text-gray-400">添加照片</div>
+            </div>
+            {/* 胶带装饰 */}
+            <div
+              className="absolute -top-1 left-1/2 -translate-x-1/2 w-16 h-3 opacity-40"
+              style={{
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6) 10%, rgba(255,255,255,0.6) 90%, transparent)',
+                backdropFilter: 'blur(1px)',
+                transform: 'translateX(-50%) rotate(2deg)',
+              }}
+            />
           </div>
         )}
       </div>

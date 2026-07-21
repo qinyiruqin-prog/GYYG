@@ -33,6 +33,7 @@ export function Desktop({
   const [page, setPage] = useState(0);
   const [edit, setEdit] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
 
   // swipe state
   const touchStartX = useRef(0);
@@ -46,6 +47,7 @@ export function Desktop({
   // long-press detection
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressTarget = useRef<string | null>(null);
+  const isDragging = useRef(false);
 
   useEffect(() => {
     const onEdit = () => setEdit(true);
