@@ -268,47 +268,36 @@ function VinylPhotoWidget({ music, album, playing, currentName, onTogglePlay }: 
           {playing ? <Pause size={11} /> : <Play size={11} />} {playing ? '暂停' : '播放'}
         </button>
       </div>
-      {/* photo — 拍立得风格 */}
+      {/* photo — 拍立得风格，保持原来大小 */}
       <div className="flex-1 flex flex-col items-center justify-center min-h-[130px]">
         {album.length > 0 ? (
           <>
             <div
-              className="relative"
-              style={{ transform: 'rotate(-4deg)' }}
+              className="relative w-full"
+              style={{ transform: 'rotate(-3deg)' }}
             >
-              {/* 拍立得相框 */}
+              {/* 拍立得相框 - 保持原来的宽度 */}
               <div
-                className="w-full max-w-[140px] bg-white rounded-[4px] shadow-2xl"
+                className="bg-white rounded-[10px] shadow-2xl mx-auto"
                 style={{
-                  padding: '8px 8px 28px 8px',
+                  maxWidth: '150px',
+                  padding: '6px 6px 20px 6px',
                   boxShadow: '0 8px 24px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
                 }}
               >
-                {/* 照片 */}
+                {/* 照片 - 正方形 */}
                 <img
                   src={album[0].url}
                   alt=""
-                  className="w-full aspect-square object-cover"
+                  className="w-full aspect-square object-cover rounded-[6px]"
                   style={{
                     boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)',
                   }}
                 />
-                {/* 拍立得底部标签区域 */}
-                <div className="absolute bottom-2 left-0 right-0 text-center">
-                  <div
-                    className="text-[9px] font-handwriting text-gray-600"
-                    style={{
-                      fontFamily: "'Ma Shan Zheng', cursive",
-                      opacity: 0.6,
-                    }}
-                  >
-                    memories
-                  </div>
-                </div>
               </div>
               {/* 胶带装饰 */}
               <div
-                className="absolute -top-1 left-1/2 -translate-x-1/2 w-16 h-3 opacity-40"
+                className="absolute -top-1 left-1/2 w-12 h-3 opacity-40"
                 style={{
                   background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6) 10%, rgba(255,255,255,0.6) 90%, transparent)',
                   backdropFilter: 'blur(1px)',
@@ -322,23 +311,26 @@ function VinylPhotoWidget({ music, album, playing, currentName, onTogglePlay }: 
           </>
         ) : (
           <div
-            className="relative"
-            style={{ transform: 'rotate(-4deg)' }}
+            className="relative w-full"
+            style={{ transform: 'rotate(-3deg)' }}
           >
-            {/* 空拍立得 */}
+            {/* 空拍立得 - 保持原来的宽度 */}
             <div
-              className="w-full max-w-[140px] bg-white rounded-[4px] shadow-2xl flex flex-col items-center justify-center aspect-[1/1.25]"
+              className="bg-white rounded-[10px] shadow-2xl flex flex-col items-center justify-center mx-auto"
               style={{
-                padding: '8px 8px 28px 8px',
+                maxWidth: '150px',
+                padding: '6px 6px 20px 6px',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
               }}
             >
-              <Camera size={24} className="text-gray-300 mb-1" />
-              <div className="text-[10px] text-gray-400">添加照片</div>
+              <div className="w-full aspect-square flex flex-col items-center justify-center rounded-[6px]" style={{ background: 'rgba(0,0,0,0.05)' }}>
+                <Camera size={24} className="text-gray-300 mb-1" />
+                <div className="text-[10px] text-gray-400">添加照片</div>
+              </div>
             </div>
             {/* 胶带装饰 */}
             <div
-              className="absolute -top-1 left-1/2 -translate-x-1/2 w-16 h-3 opacity-40"
+              className="absolute -top-1 left-1/2 w-12 h-3 opacity-40"
               style={{
                 background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6) 10%, rgba(255,255,255,0.6) 90%, transparent)',
                 backdropFilter: 'blur(1px)',
