@@ -131,7 +131,7 @@ export function Desktop({
           navigator.vibrate(50);
         }
       }
-    }, 4000); // 4000ms长按（4秒）
+    }, 2000); // 2000ms长按（2秒）
   };
 
   const cancelLongPress = () => {
