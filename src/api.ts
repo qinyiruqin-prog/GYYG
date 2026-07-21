@@ -9,22 +9,61 @@ export interface ChatMsg {
 /* Call an OpenAI-compatible chat completions endpoint. Returns assistant text. */
 export async function callChat(chat: ChatApiConfig, messages: ChatMsg[], opts?: { temperature?: number; maxTokens?: number }): Promise<string> {
   if (!chat.baseUrl) throw new Error('未配置 Chat API');
+  if (!chat.apiKey) throw new Error('未配置 API Key');
+
   const base = chat.baseUrl.replace(/\/+$/, '');
-  const res = await fetch(`${base}/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${chat.apiKey}` },
-    body: JSON.stringify({
-      model: chat.model || 'gpt-4o-mini',
-      messages,
-      temperature: opts?.temperature ?? 0.8,
-      max_tokens: opts?.maxTokens,
-    }),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  const text = data.choices?.[0]?.message?.content ?? '';
-  if (!text) throw new Error('空回复');
-  return String(text);
+
+  try {
+    const res = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${chat.apiKey}` },
+      body: JSON.stringify({
+        model: chat.model || 'gpt-4o-mini',
+        messages,
+        temperature: opts?.temperature ?? 0.8,
+        max_tokens: opts?.maxTokens,
+      }),
+    });
+
+    if (!res.ok) {
+      let errorMsg = `HTTP ${res.status}`;
+      try {
+        const errorData = await res.json();
+        if (errorData.error?.message) {
+          errorMsg = errorData.error.message;
+        } else if (errorData.message) {
+          errorMsg = errorData.message;
+        }
+      } catch {
+        // 无法解析JSON错误
+      }
+
+      if (res.status === 401) {
+        throw new Error('API Key无效或过期');
+      } else if (res.status === 403) {
+        throw new Error('没有权限访问此API');
+      } else if (res.status === 404) {
+        throw new Error('API接口不存在，请检查地址');
+      } else if (res.status === 429) {
+        throw new Error('API配额已用完或请求过多');
+      } else if (res.status >= 500) {
+        throw new Error('API服务器错误');
+      }
+
+      throw new Error(errorMsg);
+    }
+
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content ?? '';
+    if (!text) throw new Error('API返回空内容');
+    return String(text);
+  } catch (e) {
+    const error = e as Error;
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      throw new Error('网络错误：无法连接到API服务器');
+    }
+    throw error;
+  }
 }
 
 /* Convenience: single-turn prompt with a system instruction. */
