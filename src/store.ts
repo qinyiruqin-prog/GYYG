@@ -20,8 +20,8 @@ export const defaultSettings = (): AppSettings => ({
       ['moments', 'contacts', 'sms', 'mail', 'waimai', 'xiaohongshu', 'novel', 'shop', 'forum', 'calendar', 'worldbook'],
       // 第2页 - 12个图标（填满，memory在最后）
       ['generator', 'social', 'truth_or_dare', 'period', 'notes_app', 'weather', 'calculator', 'browser', 'diary', 'wallet', 'me', 'memory'],
-      // 第3页 - 13个图标（删除memory，加入alt_accounts）
-      ['alt_accounts', 'anniversary', 'group_chat', 'phone_check', 'offline_mode', 'couple_space', 'home_system', 'kitchen', 'turtle_soup', 'games', 'weibo', 'twitter', 'weight']
+      // 第3页 - 15个图标（恢复alt_accounts和closet）
+      ['anniversary', 'group_chat', 'phone_check', 'offline_mode', 'couple_space', 'home_system', 'kitchen', 'turtle_soup', 'games', 'weibo', 'twitter', 'weight', 'discover', 'alt_accounts', 'closet']
     ],
     widgets: [
       // 第1页小部件
