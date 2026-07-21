@@ -375,7 +375,7 @@ function IdentityEditorV3({
     <Modal open onClose={onClose} title={isNew ? '新建身份' : '编辑身份'}>
       <div className="mb-4">
         {/* 内容区域 - 移除Tab，所有字段在一个页面 */}
-        <div className="max-h-[60vh] overflow-y-auto pr-2 no-scrollbar space-y-4">
+        <div className="max-h-[70vh] overflow-y-auto pr-2 space-y-4" style={{ scrollbarWidth: 'thin' }}>
 
           {/* 1. 头像 */}
           <div className="glass-strong rounded-2xl p-4">

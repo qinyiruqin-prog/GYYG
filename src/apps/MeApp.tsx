@@ -6,7 +6,7 @@ import { Modal } from '../components/Sheet';
 import { ApiConfigScreen } from './ApiConfigScreen';
 import { ApiPresetScreen, presetToApi } from './ApiPresetScreen';
 import { ThemeScreen } from './ThemeScreen';
-import { IdentityScreen } from './IdentityScreen';
+import { IdentityScreenV3 as IdentityScreen } from './IdentityScreenV3';
 import { PartitionScreen } from './PartitionScreen';
 import { DataScreen } from './DataScreen';
 import { AssetsScreen } from './AssetsScreen';
