@@ -56,7 +56,6 @@ export const APPS: AppMeta[] = [
   { id: 'weight',         name: '体重管理',   icon: 'Scale',          available: true, emoji: '⚖️' },
   { id: 'discover',       name: '发现',       icon: 'Sparkles',       available: true, emoji: '✨' },
   { id: 'alt_accounts',   name: '小号',       icon: 'Users',          available: true, emoji: '👤' },
-  { id: 'settings_v3',    name: '设置',       icon: 'Settings',       available: true, emoji: '⚙️' }, // 合并了"我的"和"设置"功能
 
   // 快捷球
   { id: 'sheep',        name: '羊羊',    icon: '',                 available: true, shortcutBall: true, emoji: '🐑' },

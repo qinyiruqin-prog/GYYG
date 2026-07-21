@@ -260,6 +260,71 @@ export function MeApp({
             }
           />
         )}
+      </ListGroup>
+
+      {/* 显示设置 */}
+      <div className="text-[13px] font-medium mb-2 mt-4 txt-accent">显示设置</div>
+      <ListGroup>
+        <Row
+          label={<Menu icon={<Settings size={17} />} text="内心想法透明度" />}
+          hint={`${Math.round((settings.innerThoughtOpacity || 0.7) * 100)}%`}
+          onClick={() => {}}
+          right={
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={Math.round((settings.innerThoughtOpacity || 0.7) * 100)}
+              onChange={(e) => updateSettings({ innerThoughtOpacity: Number(e.target.value) / 100 })}
+              onClick={(e) => e.stopPropagation()}
+              className="w-24 h-1 accent-[var(--accent)] cursor-pointer"
+            />
+          }
+        />
+        <Row
+          label={<Menu icon={<Settings size={17} />} text="自动保存角色图片" />}
+          hint={settings.autoSaveCharImages !== false ? '开启' : '关闭'}
+          onClick={() => updateSettings({ autoSaveCharImages: settings.autoSaveCharImages === false ? true : false })}
+          right={
+            <span
+              className={`text-[12px] px-2 py-0.5 rounded-full ${settings.autoSaveCharImages !== false ? 'txt-accent' : 'txt-faint'}`}
+              style={{ background: settings.autoSaveCharImages !== false ? 'var(--icon-bg-active)' : 'var(--icon-bg)' }}
+            >
+              {settings.autoSaveCharImages !== false ? 'ON' : 'OFF'}
+            </span>
+          }
+        />
+        <Row
+          label={<Menu icon={<Settings size={17} />} text="侧边滑动返回" />}
+          hint={settings.swipeBackEnabled !== false ? '开启' : '关闭'}
+          onClick={() => updateSettings({ swipeBackEnabled: settings.swipeBackEnabled === false ? true : false })}
+          right={
+            <span
+              className={`text-[12px] px-2 py-0.5 rounded-full ${settings.swipeBackEnabled !== false ? 'txt-accent' : 'txt-faint'}`}
+              style={{ background: settings.swipeBackEnabled !== false ? 'var(--icon-bg-active)' : 'var(--icon-bg)' }}
+            >
+              {settings.swipeBackEnabled !== false ? 'ON' : 'OFF'}
+            </span>
+          }
+        />
+        <Row
+          label={<Menu icon={<Settings size={17} />} text="悬浮球" />}
+          hint={settings.floatingBallEnabled ? '开启' : '关闭'}
+          onClick={() => updateSettings({ floatingBallEnabled: !settings.floatingBallEnabled })}
+          right={
+            <span
+              className={`text-[12px] px-2 py-0.5 rounded-full ${settings.floatingBallEnabled ? 'txt-accent' : 'txt-faint'}`}
+              style={{ background: settings.floatingBallEnabled ? 'var(--icon-bg-active)' : 'var(--icon-bg)' }}
+            >
+              {settings.floatingBallEnabled ? 'ON' : 'OFF'}
+            </span>
+          }
+        />
+      </ListGroup>
+
+      {/* 关于 */}
+      <div className="text-[13px] font-medium mb-2 mt-4 txt-accent">其他</div>
+      <ListGroup>
         <Row label={<Menu icon={<Info size={17} />} text="关于" />} onClick={() => setAbout(true)} right={<ChevronRight size={18} className="txt-faint" />} />
       </ListGroup>
 
