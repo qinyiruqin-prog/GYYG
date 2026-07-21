@@ -23,7 +23,7 @@ export const defaultSettings = (): AppSettings => ({
       // 第3页 - 工具应用（8个图标）
       ['weather', 'calculator', 'browser', 'diary', 'wallet', 'me', 'novel', 'xiaohongshu'],
       // 第4页 - v3.0新功能A（8个图标）
-      ['anniversary', 'group_chat', 'phone_check', 'offline_mode', 'couple_space', 'home_system', 'turtle_soup', 'games'],
+      ['anniversary', 'group_chat', 'phone_check', 'offline_mode', 'couple_space', 'home_system', 'kitchen', 'turtle_soup'],
       // 第5页 - v3.0新功能B（8个图标）
       ['weibo', 'twitter', 'memory', 'weight', 'discover', 'alt_accounts', 'settings_v3', 'closet']
     ],
@@ -169,6 +169,17 @@ export function loadState(): PersistShape {
     if (!allIds.includes('wallet')) {
       const last = parsed.settings.desktop.pages.length - 1;
       parsed.settings.desktop.pages[last] = [...(parsed.settings.desktop.pages[last] ?? []), 'wallet'];
+    }
+    // migrate: add kitchen app to desktop if missing
+    if (!allIds.includes('kitchen')) {
+      // 添加到第4页（索引3）
+      const targetPage = 3;
+      if (parsed.settings.desktop.pages[targetPage]) {
+        parsed.settings.desktop.pages[targetPage] = [...parsed.settings.desktop.pages[targetPage], 'kitchen'];
+      } else {
+        const last = parsed.settings.desktop.pages.length - 1;
+        parsed.settings.desktop.pages[last] = [...(parsed.settings.desktop.pages[last] ?? []), 'kitchen'];
+      }
     }
     // migrate: wallet settings
     if (parsed.settings.userBalance === undefined) parsed.settings.userBalance = defs.userBalance;
