@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { callChatRich, generateIncomingRequest, generateImage, textToSpeech, type ChatMsg } from '../api';
 import { Desktop } from './Desktop';
 import { StatusBar } from './StatusBar';
-import { HomeIndicator } from './HomeIndicator';
 import { ComingSoon } from './ComingSoon';
 import { MeApp } from '../apps/MeApp';
 import { AssistantScreen } from '../apps/AssistantScreen';
@@ -734,8 +733,6 @@ export function PhoneShell({
       />
       <StatusBar style={dark ? 'dark' : 'light'} />
       {renderOpen()}
-
-      <HomeIndicator onHome={goHome} dark={false} />
     </div>
   );
 }
