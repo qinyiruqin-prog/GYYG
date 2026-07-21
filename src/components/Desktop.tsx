@@ -131,7 +131,7 @@ export function Desktop({
           navigator.vibrate(50);
         }
       }
-    }, 800); // 800ms长按
+    }, 4000); // 4000ms长按（4秒）
   };
 
   const cancelLongPress = () => {
@@ -509,7 +509,6 @@ function IconGrid({
             onOpen={() => onOpenApp(appId)}
             jiggle={edit}
             onLongPress={() => { /* edit triggered by parent */ }}
-            onRemove={() => removeApp(appId)}
           />
         </div>
       ))}
