@@ -4,7 +4,6 @@ import { Desktop } from './Desktop';
 import { StatusBar } from './StatusBar';
 import { HomeIndicator } from './HomeIndicator';
 import { ComingSoon } from './ComingSoon';
-import { FloatingBall } from './FloatingBall';
 import { MeApp } from '../apps/MeApp';
 import { AssistantScreen } from '../apps/AssistantScreen';
 import { ApiPresetScreen, presetToApi } from '../apps/ApiPresetScreen';
@@ -73,7 +72,6 @@ export function PhoneShell({
   replaceState: (next: PersistShape) => void;
 }) {
   const [open, setOpen] = useState<OpenApp>(null);
-  const [ballOpen, setBallOpen] = useState(false);
   const player = useMusicPlayer(settings.music);
   const dark = isDark(settings.themeId);
 
@@ -724,25 +722,6 @@ export function PhoneShell({
       <StatusBar style={dark ? 'dark' : 'light'} />
       {renderOpen()}
 
-      {/* 悬浮球 */}
-      <FloatingBall
-        enabled={settings.floatingBallEnabled !== false && !open}
-        onClick={() => setBallOpen(true)}
-      />
-
-      <Sheet open={ballOpen} onClose={() => setBallOpen(false)} title="快捷方式">
-        <div className="space-y-2">
-          <ShortcutRow emoji="💬" name="开始聊天" desc="快速打开聊天" onClick={() => { setBallOpen(false); setOpen('sheep'); }} />
-          <ShortcutRow emoji="📸" name="朋友圈" desc="查看动态" onClick={() => { setBallOpen(false); setOpen('moments'); }} />
-          <ShortcutRow emoji="👥" name="通讯录" desc="联系人列表" onClick={() => { setBallOpen(false); setOpen('contacts'); }} />
-          <ShortcutRow emoji="📍" name="线下模式" desc="记录现实活动" onClick={() => { setBallOpen(false); setOpen('offline_mode'); }} />
-          <ShortcutRow emoji="💑" name="情侣空间" desc="专属情侣功能" onClick={() => { setBallOpen(false); setOpen('couple_space'); }} />
-          <ShortcutRow emoji="🏠" name="家园系统" desc="共同的家" onClick={() => { setBallOpen(false); setOpen('home_system'); }} />
-          <ShortcutRow emoji="✨" name="羊羊助手" desc="问答 AI" onClick={() => { setBallOpen(false); setOpen('assistant'); }} />
-          <ShortcutRow emoji="🔑" name="API 预设" desc="手动切换预设" onClick={() => { setBallOpen(false); setOpen('apiPreset'); }} />
-          <ShortcutRow emoji="📖" name="使用手册" desc="查看说明" onClick={() => { setBallOpen(false); setOpen('manual'); }} />
-        </div>
-      </Sheet>
       <HomeIndicator onHome={goHome} dark={false} />
     </div>
   );

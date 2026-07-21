@@ -307,19 +307,6 @@ export function MeApp({
             </span>
           }
         />
-        <Row
-          label={<Menu icon={<Settings size={17} />} text="悬浮球" />}
-          hint={settings.floatingBallEnabled ? '开启' : '关闭'}
-          onClick={() => updateSettings({ floatingBallEnabled: !settings.floatingBallEnabled })}
-          right={
-            <span
-              className={`text-[12px] px-2 py-0.5 rounded-full ${settings.floatingBallEnabled ? 'txt-accent' : 'txt-faint'}`}
-              style={{ background: settings.floatingBallEnabled ? 'var(--icon-bg-active)' : 'var(--icon-bg)' }}
-            >
-              {settings.floatingBallEnabled ? 'ON' : 'OFF'}
-            </span>
-          }
-        />
       </ListGroup>
 
       {/* 关于 */}
