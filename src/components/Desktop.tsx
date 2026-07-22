@@ -333,11 +333,11 @@ function Page3({
         </div>
 
         <div className="p-3.5 rounded-2xl bg-pink-500/5 border border-pink-500/10 space-y-2">
-          <p className="text-[12px] text-pink-200 font-medium leading-relaxed">
+          <p className="text-[12px] font-medium leading-relaxed" style={{ color: 'var(--text-dim)' }}>
             {caringMessage}
           </p>
           {latestRecord && (
-            <div className="text-[10px] text-pink-300/70 flex items-center justify-between pt-1">
+            <div className="text-[10px] text-neutral-500 flex items-center justify-between pt-1">
               <span>预计下次还有：{daysUntilNext} 天</span>
               <span>周期规律：{cycleDays}天</span>
             </div>
