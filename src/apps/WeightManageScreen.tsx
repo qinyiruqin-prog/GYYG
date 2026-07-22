@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Scale, Target, TrendingDown, TrendingUp, Plus, Calendar } from 'lucide-react';
+import { Scale, Target, TrendingDown, TrendingUp, Plus, Calendar, MessageCircle } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { Modal } from '../components/Sheet';
 import { uid } from '../utils';
-import type { WeightRecord, WeightGoal } from '../types';
+import { askAI } from '../api';
+import type { WeightRecord, WeightGoal, Character, ApiConfig, Memory } from '../types';
 
 const calculateBMI = (weight: number, height: number) => {
   const heightM = height / 100;
@@ -18,21 +19,31 @@ const getBMICategory = (bmi: number) => {
 };
 
 export function WeightManageScreen({
+  api,
   records,
   goals,
+  characters,
+  memories,
   onChange,
   onChangeGoals,
+  onChangeMemories,
   onBack,
 }: {
+  api: ApiConfig;
   records: WeightRecord[];
   goals: WeightGoal[];
+  characters: Character[];
+  memories: Memory[];
   onChange: (r: WeightRecord[]) => void;
   onChangeGoals: (g: WeightGoal[]) => void;
+  onChangeMemories: (m: Memory[]) => void;
   onBack: () => void;
 }) {
   const [tab, setTab] = useState<'records' | 'goals'>('records');
   const [composing, setComposing] = useState(false);
   const [addingGoal, setAddingGoal] = useState(false);
+  const [supervisorMessages, setSupervisorMessages] = useState<{ character: Character; message: string }[]>([]);
+  const [gettingSupervision, setGettingSupervision] = useState(false);
 
   // 记录表单
   const [weight, setWeight] = useState('');
@@ -48,6 +59,49 @@ export function WeightManageScreen({
   const sorted = [...records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const latest = sorted[0];
   const activeGoal = goals.find((g) => !g.achieved);
+
+  const getSupervisorFeedback = async () => {
+    if (characters.length === 0) {
+      alert('请先添加角色');
+      return;
+    }
+
+    setGettingSupervision(true);
+    try {
+      const progress = latest ? `当前体重${latest.weight}kg` : '还没有记录体重';
+      const goalInfo = activeGoal ? `目标体重${activeGoal.targetWeight}kg，截止${new Date(activeGoal.targetDate).toLocaleDateString('zh-CN')}` : '还没有设定目标';
+      const trend = sorted.length > 1 ? `最近趋势：${sorted[0].weight > sorted[1].weight ? '上升' : '下降'}` : '';
+
+      const messages: { character: Character; message: string }[] = [];
+
+      for (const char of characters.slice(0, 3)) {
+        const sys = `你是${char.name}，现在要根据用户的体重数据给出建议和鼓励。语气要温暖、支持、像朋友一样。短回复，1-2句。`;
+        const prompt = `用户的体重数据：${progress}。${goalInfo}。${trend}。请给出你的建议和鼓励。`;
+
+        const feedback = await askAI(api, sys, prompt, { temperature: 0.7, maxTokens: 100 });
+        messages.push({ character: char, message: feedback });
+
+        // 保存到角色短期记忆
+        const memory: Memory = {
+          id: uid(),
+          characterId: char.id,
+          type: 'conversation',
+          title: '查看了你的体重进度',
+          content: `我看到你的体重数据：${progress}。我的建议是：${feedback}`,
+          importance: 60,
+          tags: ['体重管理', '监督'],
+          ts: Date.now(),
+        };
+        onChangeMemories([...memories, memory]);
+      }
+
+      setSupervisorMessages(messages);
+    } catch (e) {
+      alert(`获取反馈失败：${(e as Error).message}`);
+    } finally {
+      setGettingSupervision(false);
+    }
+  };
 
   const addRecord = () => {
     if (!weight.trim() || !height.trim()) return;
