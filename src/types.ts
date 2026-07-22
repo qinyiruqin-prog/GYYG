@@ -149,6 +149,17 @@ export interface ChatMessage {
   deliveryOrder?: DeliveryOrder; // 外卖代付订单
   senderAltId?: ID; // 发送者小号ID（支持用户/角色切换小号发消息）
   mode?: InteractionMode; // 消息的交互模式（线上/线下）
+  callRecord?: CallRecord; // 通话记录
+}
+
+export interface CallRecord {
+  id: ID;
+  type: 'video' | 'voice';
+  startTime: number;
+  endTime: number;
+  duration: number; // 通话时长（秒）
+  messages: ChatMessage[]; // 通话中的消息记录
+  cameraEnabled?: boolean; // 视频通话是否开启了摄像头
 }
 export interface ChatThread {
   id: ID;

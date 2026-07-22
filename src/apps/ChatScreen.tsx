@@ -6,7 +6,7 @@ import { ListGroup, Row } from '../components/ui';
 import { uid } from '../utils';
 import { getPeriodPrompt } from './PeriodScreen';
 import { callChatRich, generateImage, textToSpeech, detectNpcs, detectPlotEvents, evaluateOutgoingRequest, generateIncomingRequest, askAI, type ChatMsg } from '../api';
-import type { ApiConfig, Character, ChatThread, ChatMessage, WorldEntry, MessageMedia, StoryEvent, UserIdentity, FriendRequest, AppSettings } from '../types';
+import type { ApiConfig, Character, ChatThread, ChatMessage, WorldEntry, MessageMedia, StoryEvent, UserIdentity, FriendRequest, AppSettings, CallRecord } from '../types';
 
 export function ChatScreen({
   api,
@@ -1072,7 +1072,10 @@ function ChatConversation({
   const [showVoiceInput, setShowVoiceInput] = useState(false);
   const [voiceText, setVoiceText] = useState('');
   const [inCall, setInCall] = useState<'video' | 'voice' | null>(null);
+  const [callStartTime, setCallStartTime] = useState<number>(0);
+  const [callMessages, setCallMessages] = useState<ChatMessage[]>([]);
   const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [viewingCallRecord, setViewingCallRecord] = useState<CallRecord | null>(null);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const endRef = useRef<HTMLDivElement>(null);
@@ -1415,33 +1418,114 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
   // 开始通话
   const startCall = async (type: 'video' | 'voice') => {
     setInCall(type);
+    setCallStartTime(Date.now());
+    setCallMessages([]);
+    setCameraEnabled(false);
     setShowPlusMenu(false);
+  };
 
-    const callMsg: ChatMessage = {
-      id: uid(),
-      role: 'user',
-      content: type === 'video' ? '发起了视频通话' : '发起了语音通话',
-      ts: Date.now(),
-    };
-    onSend([...thread.messages, callMsg]);
+  // 通话中发送消息
+  const sendCallMessage = async () => {
+    const text = input.trim();
+    if (!text || loading || !inCall) return;
+    setInput('');
+
+    const userMsg: ChatMessage = { id: uid(), role: 'user', content: text, ts: Date.now() };
+    const nextCallMessages = [...callMessages, userMsg];
+    setCallMessages(nextCallMessages);
+
+    setLoading(true);
+    try {
+      // 构建通话系统提示
+      let callSystem = char.persona || `你是${char.name}。保持角色设定，自然地回应。`;
+
+      if (inCall === 'video') {
+        callSystem += `\n\n[视频通话模式]
+当前是视频通话，你可以看到用户。可以使用动作描写，如 *微笑* 或 (挥手)。
+${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子、表情、环境等。' : '用户的摄像头未开启，你看不到用户。'}`;
+      } else {
+        callSystem += `\n\n[语音通话模式]
+当前是纯语音通话，你只能听到声音。严格禁止使用任何动作描写，只能通过语言和语气表达。`;
+      }
+
+      // 添加回复设置
+      const minReplyCount = thread.minReplyCount || 1;
+      const maxReplyCount = thread.maxReplyCount || 1;
+      const minWords = thread.minWordCount || 50;
+      const maxWords = thread.maxWordCount || 120;
+
+      callSystem += `\n\n[回复要求]
+你需要回复 ${minReplyCount} 到 ${maxReplyCount} 条消息（根据对话内容自然决定具体条数）。
+每条消息的字数应该在 ${minWords} 到 ${maxWords} 字之间。`;
+
+      const history: ChatMsg[] = [
+        { role: 'system', content: callSystem },
+        ...thread.messages.slice(-6).map((m) => ({ role: m.role, content: m.content } as ChatMsg)),
+        ...nextCallMessages.map((m) => ({ role: m.role, content: m.content } as ChatMsg)),
+      ];
+
+      const rich = await callChatRich(api.chat, history, { temperature: 0.85, maxTokens: 800 });
+      const assistantMsg: ChatMessage = {
+        id: uid(),
+        role: 'assistant',
+        content: rich.content,
+        innerThought: rich.innerThought,
+        ts: Date.now(),
+      };
+
+      setCallMessages([...nextCallMessages, assistantMsg]);
+    } catch (e) {
+      setCallMessages([...nextCallMessages, { id: uid(), role: 'assistant', content: `（出错了：${(e as Error).message}）`, ts: Date.now() }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 结束通话
   const endCall = () => {
-    const endMsg: ChatMessage = {
+    if (!inCall) return;
+
+    const endTime = Date.now();
+    const duration = Math.floor((endTime - callStartTime) / 1000);
+
+    // 创建通话记录
+    const callRecord: CallRecord = {
+      id: uid(),
+      type: inCall,
+      startTime: callStartTime,
+      endTime,
+      duration,
+      messages: callMessages,
+      cameraEnabled: inCall === 'video' ? cameraEnabled : undefined,
+    };
+
+    // 在主聊天中添加通话记录卡片
+    const callCardMsg: ChatMessage = {
       id: uid(),
       role: 'user',
-      content: `结束了${inCall === 'video' ? '视频' : '语音'}通话`,
-      ts: Date.now(),
+      content: `${inCall === 'video' ? '视频' : '语音'}通话`,
+      ts: endTime,
+      callRecord,
     };
-    onSend([...thread.messages, endMsg]);
+
+    onSend([...thread.messages, callCardMsg]);
+
     setInCall(null);
+    setCallMessages([]);
     setCameraEnabled(false);
+    setCallStartTime(0);
   };
 
   const unconsumedEvents = storyEvents.filter((e) => !e.consumed);
   const displayTitle = thread.charAltName ? `${thread.charAltName} (试探小号)` : (thread.isGroup ? thread.groupName : char.name);
   const currentMode = thread.interactionMode || 'online';
+
+  // 格式化通话时长
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <AppScreen
@@ -1511,33 +1595,59 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
                       }
                       return next;
                     });
+                  } else if (m.callRecord) {
+                    // 点击通话记录卡片查看详情
+                    setViewingCallRecord(m.callRecord);
                   }
                 }}
-                onPointerDown={() => !multiSelectMode && startLongPress(m)}
+                onPointerDown={() => !multiSelectMode && !m.callRecord && startLongPress(m)}
                 onPointerUp={cancelLongPress}
                 onPointerLeave={cancelLongPress}
-                className={`max-w-[78%] space-y-2 ${m.role === 'user' ? 'items-end' : 'items-start'} flex flex-col ${multiSelectMode ? 'cursor-pointer' : ''} ${selectedMessages.has(m.id) ? 'opacity-50 ring-2 ring-[var(--accent)] rounded-2xl' : ''}`}
+                className={`max-w-[78%] space-y-2 ${m.role === 'user' ? 'items-end' : 'items-start'} flex flex-col ${multiSelectMode || m.callRecord ? 'cursor-pointer' : ''} ${selectedMessages.has(m.id) ? 'opacity-50 ring-2 ring-[var(--accent)] rounded-2xl' : ''}`}
               >
-                {m.content && (
-                  <div className="flex flex-col gap-1 items-start w-full">
-                    <div
-                      className={`px-3.5 py-2.5 rounded-2xl text-[14px] leading-relaxed ${m.role === 'user' ? 'rounded-br-md text-white font-medium' : 'glass rounded-bl-md'}`}
-                      style={m.role === 'user' ? { background: 'var(--accent)', color: 'var(--bg)' } : undefined}
-                    >
-                      {m.content}
-                    </div>
-                    {/* Inline translation display */}
-                    {translations[m.id] && showTranslation[m.id] && (
-                      <div className="px-3 py-1.5 rounded-xl text-[12px] bg-indigo-500/10 border border-indigo-500/15 text-indigo-200 leading-relaxed max-w-full animate-fade-in mt-1 select-text">
-                        <div className="text-[10px] text-indigo-400 font-bold mb-0.5 flex items-center gap-1">
-                          <span>🌐 翻译 / Translation</span>
+                {/* 通话记录卡片 */}
+                {m.callRecord ? (
+                  <div className="glass rounded-xl p-3 border border-green-500/30 bg-green-500/5 min-w-[200px]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[20px]">{m.callRecord.type === 'video' ? '📹' : '📞'}</span>
+                      <div className="flex-1">
+                        <div className="text-[13px] font-medium text-green-400">
+                          {m.callRecord.type === 'video' ? '视频通话' : '语音通话'}
                         </div>
-                        {translations[m.id]}
+                        <div className="text-[11px] txt-faint">
+                          通话时长 {formatDuration(m.callRecord.duration)}
+                        </div>
+                      </div>
+                    </div>
+                    {m.callRecord.type === 'video' && m.callRecord.cameraEnabled && (
+                      <div className="text-[10px] text-green-400/70 mt-1">📷 摄像头已开启</div>
+                    )}
+                    <div className="text-[10px] txt-faint mt-2">点击查看通话详情</div>
+                  </div>
+                ) : (
+                  <>
+                    {m.content && (
+                      <div className="flex flex-col gap-1 items-start w-full">
+                        <div
+                          className={`px-3.5 py-2.5 rounded-2xl text-[14px] leading-relaxed ${m.role === 'user' ? 'rounded-br-md text-white font-medium' : 'glass rounded-bl-md'}`}
+                          style={m.role === 'user' ? { background: 'var(--accent)', color: 'var(--bg)' } : undefined}
+                        >
+                          {m.content}
+                        </div>
+                        {/* Inline translation display */}
+                        {translations[m.id] && showTranslation[m.id] && (
+                          <div className="px-3 py-1.5 rounded-xl text-[12px] bg-indigo-500/10 border border-indigo-500/15 text-indigo-200 leading-relaxed max-w-full animate-fade-in mt-1 select-text">
+                            <div className="text-[10px] text-indigo-400 font-bold mb-0.5 flex items-center gap-1">
+                              <span>🌐 翻译 / Translation</span>
+                            </div>
+                            {translations[m.id]}
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
+                    {m.media?.map((md, i) => <MediaBubble key={i} media={md} />)}
+                  </>
                 )}
-                {m.media?.map((md, i) => <MediaBubble key={i} media={md} />)}
               </div>
 
               {/* 用户头像 - 右侧 */}
@@ -1652,7 +1762,9 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
               </div>
 
               {/* 通话时长 */}
-              <div className="text-[13px] txt-faint mt-2">00:00</div>
+              <div className="text-[13px] txt-faint mt-2">
+                {formatDuration(Math.floor((Date.now() - callStartTime) / 1000))}
+              </div>
             </div>
 
             {/* 视频通话特有：摄像头状态 */}
@@ -1664,23 +1776,21 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
               </div>
             )}
 
-            {/* 通话消息区域 */}
+            {/* 通话消息区域 - 使用独立的 callMessages */}
             <div className="flex-1 overflow-y-auto px-4 space-y-3 mb-4">
-              {thread.messages
-                .filter(m => m.ts > (Date.now() - 600000)) // 只显示最近10分钟的消息
-                .map((m) => (
-                  <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div
-                      className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-[14px] ${
-                        m.role === 'user'
-                          ? 'bg-[var(--accent)] text-white rounded-br-md'
-                          : 'bg-neutral-800 text-white rounded-bl-md'
-                      }`}
-                    >
-                      {m.content}
-                    </div>
+              {callMessages.map((m) => (
+                <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-[14px] ${
+                      m.role === 'user'
+                        ? 'bg-[var(--accent)] text-white rounded-br-md'
+                        : 'bg-neutral-800 text-white rounded-bl-md'
+                    }`}
+                  >
+                    {m.content}
                   </div>
-                ))}
+                </div>
+              ))}
               {loading && (
                 <div className="flex justify-start">
                   <div className="bg-neutral-800 rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-1">
@@ -1696,12 +1806,12 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && send()}
+                  onKeyDown={(e) => e.key === 'Enter' && sendCallMessage()}
                   placeholder="输入消息..."
                   className="flex-1 bg-transparent text-[14px] outline-none text-white placeholder:text-neutral-500"
                 />
                 <button
-                  onClick={send}
+                  onClick={sendCallMessage}
                   disabled={loading || !input.trim()}
                   className="w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-40 transition-opacity"
                   style={{ background: 'var(--accent)' }}
@@ -1719,7 +1829,13 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
                     const newState = !cameraEnabled;
                     setCameraEnabled(newState);
                     if (newState) {
-                      sendActive(`用户开启了摄像头，你现在可以看到用户的样子了。请根据你看到的场景（用户的表情、环境、穿着等）做出自然的回应。可以使用动作描写。`);
+                      const msg: ChatMessage = {
+                        id: uid(),
+                        role: 'user',
+                        content: '[开启了摄像头]',
+                        ts: Date.now(),
+                      };
+                      setCallMessages([...callMessages, msg]);
                     }
                   }}
                   className="w-14 h-14 rounded-full bg-neutral-700 hover:bg-neutral-600 flex items-center justify-center transition-colors"
@@ -2048,6 +2164,48 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
             发送语音
           </button>
         </div>
+      </Modal>
+
+      {/* 查看通话记录详情模态框 */}
+      <Modal open={!!viewingCallRecord} onClose={() => setViewingCallRecord(null)} title={`${viewingCallRecord?.type === 'video' ? '视频' : '语音'}通话详情`}>
+        {viewingCallRecord && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between glass rounded-xl p-3">
+              <div>
+                <div className="text-[13px] txt-faint">通话时长</div>
+                <div className="text-[16px] font-medium txt-accent">{formatDuration(viewingCallRecord.duration)}</div>
+              </div>
+              {viewingCallRecord.type === 'video' && (
+                <div>
+                  <div className="text-[13px] txt-faint">摄像头</div>
+                  <div className="text-[16px] font-medium">
+                    {viewingCallRecord.cameraEnabled ? '✅ 已开启' : '❌ 未开启'}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="text-[13px] txt-dim font-medium mb-2">通话内容</div>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {viewingCallRecord.messages.map((m) => (
+                <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[80%] px-3 py-2 rounded-xl text-[13px] ${
+                      m.role === 'user'
+                        ? 'bg-[var(--accent)] text-white rounded-br-md'
+                        : 'glass rounded-bl-md'
+                    }`}
+                  >
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+              {viewingCallRecord.messages.length === 0 && (
+                <div className="text-center txt-faint text-[13px] py-8">通话中没有消息</div>
+              )}
+            </div>
+          </div>
+        )}
       </Modal>
     </AppScreen>
   );
