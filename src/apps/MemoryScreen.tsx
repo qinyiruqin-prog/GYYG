@@ -1,15 +1,23 @@
 import { useState } from 'react';
-import { Brain, Plus, Star, Tag, Search, Trash2, Link as LinkIcon } from 'lucide-react';
+import { Brain, Plus, Star, Tag, Search, Trash2, Link as LinkIcon, Layers } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { Modal, Confirm } from '../components/Sheet';
 import { uid } from '../utils';
+import { determineMemoryLayer, getCharacterMemoriesByLayer, searchMemoriesWithContext } from '../services/memoryLayerService';
 import type { Memory, Character } from '../types';
+import type { LayeredMemory, MemoryLayer } from '../services/memoryLayerService';
 
 const MEMORY_TYPES = [
   { id: 'important', name: '重要', color: '#ef4444', emoji: '⭐' },
   { id: 'conversation', name: '对话', color: '#3b82f6', emoji: '💬' },
   { id: 'event', name: '事件', color: '#8b5cf6', emoji: '📅' },
   { id: 'emotion', name: '情感', color: '#ec4899', emoji: '❤️' },
+] as const;
+
+const MEMORY_LAYERS = [
+  { id: 'long-term', name: '长期记忆', emoji: '🧠', desc: '永久保存的重要信息' },
+  { id: 'short-term', name: '短期记忆', emoji: '💭', desc: '近期的对话和互动' },
+  { id: 'temporary', name: '暂时记忆', emoji: '✨', desc: '当前会话信息' },
 ] as const;
 
 export function MemoryScreen({
@@ -26,6 +34,7 @@ export function MemoryScreen({
   const [search, setSearch] = useState('');
   const [filterCharId, setFilterCharId] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  const [filterLayer, setFilterLayer] = useState<string>('all');
   const [composing, setComposing] = useState(false);
   const [editing, setEditing] = useState<Memory | null>(null);
   const [detail, setDetail] = useState<Memory | null>(null);
@@ -40,16 +49,28 @@ export function MemoryScreen({
   const [tags, setTags] = useState('');
 
   const filtered = memories
+    .map((m) => ({
+      ...m,
+      layer: determineMemoryLayer(m) as MemoryLayer,
+    }))
     .filter((m) => {
       if (filterCharId !== 'all' && m.characterId !== filterCharId) return false;
       if (filterType !== 'all' && m.type !== filterType) return false;
+      if (filterLayer !== 'all' && m.layer !== filterLayer) return false;
       if (search) {
-        const q = search.toLowerCase();
-        return m.title.toLowerCase().includes(q) || m.content.toLowerCase().includes(q) || m.tags?.some((t) => t.toLowerCase().includes(q));
+        const results = searchMemoriesWithContext([m as LayeredMemory], search);
+        return results.length > 0;
       }
       return true;
     })
-    .sort((a, b) => b.importance - a.importance);
+    .sort((a, b) => {
+      // 长期记忆优先
+      const layerOrder = { 'long-term': 0, 'short-term': 1, 'temporary': 2 };
+      const layerDiff = (layerOrder[a.layer] ?? 3) - (layerOrder[b.layer] ?? 3);
+      if (layerDiff !== 0) return layerDiff;
+      // 同层按重要度和时间排序
+      return b.importance - a.importance || b.ts - a.ts;
+    });
 
   const resetForm = () => {
     setCharId('');
@@ -178,6 +199,12 @@ export function MemoryScreen({
             <button key={t.id} onClick={() => setFilterType(t.id)} className={`tap px-3 h-8 rounded-full text-[13px] shrink-0 ${filterType === t.id ? 'txt-accent' : 'txt-faint'} ${filterType === t.id ? 'glass' : ''}`}>{t.emoji} {t.name}</button>
           ))}
         </div>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <button onClick={() => setFilterLayer('all')} className={`tap px-3 h-8 rounded-full text-[13px] shrink-0 ${filterLayer === 'all' ? 'txt-accent' : 'txt-faint'} ${filterLayer === 'all' ? 'glass' : ''}`}>全部层级</button>
+          {MEMORY_LAYERS.map((l) => (
+            <button key={l.id} onClick={() => setFilterLayer(l.id)} className={`tap px-3 h-8 rounded-full text-[13px] shrink-0 ${filterLayer === l.id ? 'txt-accent' : 'txt-faint'} ${filterLayer === l.id ? 'glass' : ''}`}>{l.emoji} {l.name}</button>
+          ))}
+        </div>
       </div>
 
       {/* 记忆列表 */}
@@ -191,6 +218,7 @@ export function MemoryScreen({
             {filtered.map((m) => {
               const char = characters.find((c) => c.id === m.characterId);
               const typeInfo = MEMORY_TYPES.find((t) => t.id === m.type);
+              const layerInfo = MEMORY_LAYERS.find((l) => l.id === m.layer);
               return (
                 <div key={m.id} className="glass rounded-2xl p-3 tap" onClick={() => setDetail(m)}>
                   <div className="flex items-start gap-2.5 mb-2">
@@ -203,6 +231,7 @@ export function MemoryScreen({
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[14px] font-medium">{m.title}</span>
                         <span className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: `${typeInfo?.color}20`, color: typeInfo?.color }}>{typeInfo?.emoji}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded glass txt-dim">{layerInfo?.emoji} {layerInfo?.name}</span>
                       </div>
                       <div className="text-[13px] txt-dim line-clamp-2">{m.content}</div>
                     </div>
