@@ -217,44 +217,54 @@ function Page2({
   const cycleDays = settings.periodCycleDays || 28;
   const durationDays = settings.periodDurationDays || 5;
 
-  // 计算生理周期标记
-  const periodMarkers = new Set<number>();
-  const predictedMarkers = new Set<number>();
-  let ovulationDay = 0;
+  // 计算当天和近期的生理状态
+  const today = new Date();
+  const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  let isPeriodDay = false;
+  let isPMSDay = false; // 经期前3天
 
   if (periodRecords.length > 0) {
     const sorted = [...periodRecords].sort((a, b) => b.startDate.localeCompare(a.startDate));
     const latest = sorted[0];
     const lastStart = new Date(latest.startDate);
+    const lastStartTime = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate()).getTime();
 
-    // 标记所有已记录的经期日
-    sorted.forEach(record => {
-      const start = new Date(record.startDate);
-      const end = record.endDate ? new Date(record.endDate) : new Date(start.getTime() + durationDays * 86400000);
-      let current = new Date(start);
-      while (current <= end) {
-        periodMarkers.add(current.getTime());
-        current = new Date(current.getTime() + 86400000);
-      }
-    });
+    // 计算当前周期天数
+    const diffDays = Math.floor((todayTime - lastStartTime) / 86400000) + 1;
+    let cycleDay = diffDays > 0 ? ((diffDays - 1) % cycleDays) + 1 : 1;
 
-    // 预测未来的经期日
-    let nextStart = new Date(lastStart);
-    for (let cycle = 0; cycle < 6; cycle++) {
-      nextStart = new Date(nextStart.getTime() + cycleDays * 86400000);
-      for (let d = 0; d < durationDays; d++) {
-        const predDay = new Date(nextStart.getTime() + d * 86400000);
-        predictedMarkers.add(predDay.getTime());
+    // 判断是否在经期中
+    if (cycleDay <= durationDays) {
+      if (latest.endDate) {
+        const endTime = new Date(new Date(latest.endDate).getFullYear(), new Date(latest.endDate).getMonth(), new Date(latest.endDate).getDate()).getTime();
+        isPeriodDay = todayTime <= endTime;
+      } else {
+        isPeriodDay = todayTime >= lastStartTime && todayTime <= lastStartTime + (durationDays - 1) * 86400000;
       }
-      // 排卵日大约在下次月经前14天
-      ovulationDay = new Date(nextStart.getTime() - 14 * 86400000).getTime();
+    }
+
+    // 判断是否是经期前3天（PMS期）
+    const daysUntilNext = cycleDays - cycleDay + 1;
+    isPMSDay = daysUntilNext <= 3 && !isPeriodDay;
+
+    // 如果下一个周期的经期开始日在3天内
+    if (!isPeriodDay && !isPMSDay) {
+      let nextStart = new Date(lastStartTime);
+      for (let c = 0; c < 3; c++) {
+        nextStart = new Date(nextStart.getTime() + cycleDays * 86400000);
+        const pmsDiff = Math.floor((nextStart.getTime() - todayTime) / 86400000);
+        if (pmsDiff >= 0 && pmsDiff <= 3) {
+          isPMSDay = true;
+          break;
+        }
+      }
     }
   }
 
   const d = new Date();
   const year = d.getFullYear();
   const month = d.getMonth();
-  const today = d.getDate();
+  const todayDate = d.getDate();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const weeks = ['日', '一', '二', '三', '四', '五', '六'];
@@ -263,19 +273,9 @@ function Page2({
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let i = 1; i <= daysInMonth; i++) cells.push(i);
 
-  const isPeriodDay = (day: number) => {
-    const date = new Date(year, month, day);
-    return periodMarkers.has(date.getTime()) || predictedMarkers.has(date.getTime());
-  };
-
-  const isOvulationDay = (day: number) => {
-    const date = new Date(year, month, day);
-    return date.getTime() === ovulationDay;
-  };
-
   return (
     <div className="space-y-3">
-      {/* 自定义日历组件 — 联动经期 */}
+      {/* 日历 — 联动经期 */}
       <div
         onClick={() => onOpenApp('period')}
         className="glass rounded-[20px] p-4 border border-neutral-800/40 text-left cursor-pointer hover:border-neutral-700/60 transition-all"
@@ -283,8 +283,9 @@ function Page2({
         <div className="flex items-center justify-between mb-3">
           <div className="font-title text-[17px] txt-accent">{year}年{month + 1}月</div>
           <div className="text-[11px] txt-faint flex items-center gap-1.5">
-            {periodRecords.length > 0 ? `${periodRecords.length}条记录` : '0个日程'}
-            <span className="text-pink-400">🩸</span>
+            {isPeriodDay ? <span className="text-pink-400 font-medium">🩸 经期</span>
+              : isPMSDay ? <span className="txt-accent">🌙 PMS</span>
+              : `${periodRecords.length}条记录`}
           </div>
         </div>
         <div className="grid grid-cols-7 gap-y-1.5 text-center">
@@ -296,40 +297,28 @@ function Page2({
               {day && (
                 <div
                   className={cls(
-                    'w-7 h-7 flex items-center justify-center text-[13px] rounded-full transition-all relative',
-                    day === today ? 'font-medium' : 'txt-dim',
+                    'w-7 h-7 flex flex-col items-center justify-center text-[13px] rounded-full transition-all relative',
+                    day === todayDate ? 'font-medium' : 'txt-dim',
                   )}
-                  style={day === today ? { background: 'var(--accent)', color: 'var(--bg)' } : undefined}
+                  style={day === todayDate ? { background: 'var(--accent)', color: 'var(--bg)' } : undefined}
                 >
-                  {/* 经期日粉色圆圈标记 */}
-                  {isPeriodDay(day) && (
-                    <span
-                      className="absolute inset-0 rounded-full"
-                      style={{ border: '2px solid #f472b6', opacity: day === today ? 0.6 : 0.35 }}
-                    />
-                  )}
-                  {/* 排卵日特殊标记 */}
-                  {isOvulationDay(day) && (
-                    <span
-                      className="absolute -top-0.5 left-1/2 -translate-x-1/2 text-[8px]"
-                      style={{ color: '#818cf8' }}
-                    >
-                      🌸
-                    </span>
-                  )}
                   {day}
+                  {/* 经期当天：玫红色小圆点 */}
+                  {isPeriodDay && day === todayDate && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-pink-500" />
+                  )}
+                  {/* PMS前3天：数字颜色跟随主题加深 */}
+                  {isPMSDay && day === todayDate && !isPeriodDay && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: 'var(--text-dim)' }} />
+                  )}
                 </div>
               )}
             </div>
           ))}
         </div>
-        {periodRecords.length > 0 && (
-          <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-[var(--border)] text-[10px] txt-faint">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-400 inline-block" /> 经期</span>
-            <span className="flex items-center gap-1">🌸 排卵日</span>
-            <span className="flex items-center gap-1">🩸 点击查看详情</span>
-          </div>
-        )}
+        <div className="text-[10px] txt-faint mt-2 text-center">
+          点击查看生理状态详情 →
+        </div>
       </div>
       <Widget kind="quoteSteps" music={[]} album={[]} playing={false} onTogglePlay={() => {}} onShortcut={onShortcut} />
       <IconGrid ids={gridIds} onOpenApp={onOpenApp} />
