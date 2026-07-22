@@ -685,6 +685,8 @@ export function PhoneShell({
           offlineMode={settings.offlineMode || false}
           enableVectorMemory={settings.enableVectorMemory || false}
           autoTranslateEnabled={settings.autoTranslateEnabled || false}
+          useRealTime={settings.useRealTime !== false}
+          customTime={settings.customTime || ''}
           onUpdateSetting={(key, value) => updateSettings({ [key]: value })}
           onBack={goHome}
         />
