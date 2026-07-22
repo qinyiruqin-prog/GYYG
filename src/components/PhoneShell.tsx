@@ -72,6 +72,35 @@ export function PhoneShell({
   updateSettings: (patch: Partial<AppSettings>) => void;
   replaceState: (next: PersistShape) => void;
 }) {
+  const [hasError, setHasError] = useState(false);
+  useEffect(() => {
+    const errorListener = () => setHasError(true);
+    window.addEventListener('error', errorListener);
+    window.addEventListener('unhandledrejection', errorListener);
+    return () => {
+      window.removeEventListener('error', errorListener);
+      window.removeEventListener('unhandledrejection', errorListener);
+    };
+  }, []);
+
+  if (hasError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-neutral-950 text-white p-8">
+        <h1 className="text-4xl mb-4">💔</h1>
+        <p className="text-center text-sm mb-6 opacity-80">系统出现了一点小波动，重载一下试试看。</p>
+        <button
+          onClick={() => {
+            setHasError(false);
+            window.location.reload();
+          }}
+          className="px-6 py-3 bg-[var(--accent)] rounded-full text-[14px] font-bold"
+        >
+          立即重载
+        </button>
+      </div>
+    );
+  }
+
   const [open, setOpen] = useState<OpenApp>(null);
   const player = useMusicPlayer(settings.music);
   const dark = isDark(settings.themeId);
