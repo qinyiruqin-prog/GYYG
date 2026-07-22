@@ -1155,6 +1155,17 @@ function ChatConversation({
     if (unconsumed.length) {
       sys += '\n\n[你应该知道的事]\n' + unconsumed.map((e) => `${e.sourceCharName}那里发生的事：${e.summary}`).join('\n');
     }
+
+    // 回复设置
+    const replyCount = thread.replyCount || 1;
+    const minWords = thread.minWordCount || 50;
+    const maxWords = thread.maxWordCount || 120;
+
+    sys += `\n\n[回复要求]
+你需要回复 ${replyCount} 条消息。每条消息的字数应该在 ${minWords} 到 ${maxWords} 字之间。
+${replyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条表达反应，第二条补充细节。' : ''}
+请确保每条消息内容充实，符合字数要求，不要过于简短或冗长。`;
+
     sys += getPeriodPrompt(settings);
     return sys;
   };
@@ -1523,6 +1534,63 @@ function ChatConversation({
                 <strong className="txt-accent">线下模式：</strong>模拟现实见面场景，可以使用动作描写如 *微笑* 或 (挥手)，支持肢体语言、表情等现实互动。
               </>
             )}
+          </div>
+
+          {/* 回复条数设置 */}
+          <div>
+            <label className="text-[13px] txt-dim block mb-2 font-medium">角色每次回复条数</label>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map((num) => (
+                <button
+                  key={num}
+                  onClick={() => {
+                    onUpdateThread((t) => ({ ...t, replyCount: num }));
+                  }}
+                  className={`flex-1 py-2 rounded-xl text-[13px] font-medium transition-all ${(thread.replyCount || 1) === num ? 'bg-[var(--accent)] text-white' : 'glass txt-dim'}`}
+                >
+                  {num}条
+                </button>
+              ))}
+            </div>
+            <div className="text-[11px] txt-faint mt-1.5">当前设置：每次回复 {thread.replyCount || 1} 条消息</div>
+          </div>
+
+          {/* 字数范围设置 */}
+          <div>
+            <label className="text-[13px] txt-dim block mb-2 font-medium">每条消息字数范围</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] txt-faint block mb-1">最少字数</label>
+                <input
+                  type="number"
+                  min="10"
+                  max="500"
+                  value={thread.minWordCount || 50}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 50;
+                    onUpdateThread((t) => ({ ...t, minWordCount: Math.max(10, Math.min(500, val)) }));
+                  }}
+                  className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] txt-faint block mb-1">最多字数</label>
+                <input
+                  type="number"
+                  min="20"
+                  max="1000"
+                  value={thread.maxWordCount || 120}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 120;
+                    onUpdateThread((t) => ({ ...t, maxWordCount: Math.max(20, Math.min(1000, val)) }));
+                  }}
+                  className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
+                />
+              </div>
+            </div>
+            <div className="text-[11px] txt-faint mt-1.5">
+              当前设置：每条消息 {thread.minWordCount || 50} - {thread.maxWordCount || 120} 字
+            </div>
           </div>
 
           <div className="text-[11px] txt-faint">
