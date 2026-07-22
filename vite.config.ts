@@ -12,8 +12,9 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // Use PORT environment variable if set, otherwise use default
-      port: process.env.PORT ? parseInt(process.env.PORT) : undefined,
+      // Use PORT environment variable if set, otherwise use random port (0)
+      port: process.env.PORT ? parseInt(process.env.PORT) : 0,
+      strictPort: false,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
