@@ -264,14 +264,8 @@ function Page2({
   for (let i = 1; i <= daysInMonth; i++) cells.push(i);
 
   const isPeriodDay = (day: number) => {
-    // 强制使用简单的逻辑：当天为真以测试标记显示
-    const d = new Date(year, month, day);
-    const dateStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
-
-    // 直接检查是否在今天的记录里
-    const todayStrFormatted = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
-
-    return dateStr === todayStrFormatted;
+    const date = new Date(year, month, day);
+    return periodMarkers.has(date.getTime()) || predictedMarkers.has(date.getTime());
   };
 
   const isOvulationDay = (day: number) => {
@@ -307,15 +301,23 @@ function Page2({
                   )}
                   style={day === today ? { background: 'var(--accent)', color: 'var(--bg)' } : undefined}
                 >
-                  {day}
-                  {/* 经期：下方玫红色小圆点 */}
+                  {/* 经期日粉色圆圈标记 */}
                   {isPeriodDay(day) && (
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-pink-500" />
+                    <span
+                      className="absolute inset-0 rounded-full"
+                      style={{ border: '2px solid #f472b6', opacity: day === today ? 0.6 : 0.35 }}
+                    />
                   )}
-                  {/* 排卵日：上方樱花 */}
+                  {/* 排卵日特殊标记 */}
                   {isOvulationDay(day) && (
-                    <span className="absolute -top-1 left-1/2 -translate-x-1/2 text-[8px]">🌸</span>
+                    <span
+                      className="absolute -top-0.5 left-1/2 -translate-x-1/2 text-[8px]"
+                      style={{ color: '#818cf8' }}
+                    >
+                      🌸
+                    </span>
                   )}
+                  {day}
                 </div>
               )}
             </div>
