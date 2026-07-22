@@ -11,26 +11,9 @@ export { DiscoverScreen } from './DiscoverScreen';
 export { AltAccountsScreen } from './AltAccountsScreen';
 export { WeiboScreen } from './WeiboScreen';
 export { TwitterScreen } from './TwitterScreen';
+export { MemoryScreen } from './MemoryScreen';
 
 // 所有核心v3.0功能已从单独文件导出
-
-export function MemoryScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="记忆系统"
-      icon="🧠"
-      description="AI角色的记忆中枢，使用向量技术增强记忆"
-      features={[
-        '记忆存储和管理',
-        '向量嵌入技术',
-        '相似度搜索',
-        '重要度评分',
-        '记忆关联图谱',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
 
 export function WeightManageScreen({ onBack }: { onBack: () => void }) {
   return (

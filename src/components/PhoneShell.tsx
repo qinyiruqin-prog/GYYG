@@ -688,7 +688,15 @@ export function PhoneShell({
           onBack={goHome}
         />
       );
-    if (open === 'memory') return <MemoryScreen onBack={goHome} />;
+    if (open === 'memory')
+      return (
+        <MemoryScreen
+          characters={settings.characters}
+          memories={settings.memories || []}
+          onChange={(memories) => updateSettings({ memories })}
+          onBack={goHome}
+        />
+      );
     if (open === 'weight') return <WeightManageScreen onBack={goHome} />;
     if (open === 'discover') return <DiscoverScreen onBack={goHome} />;
     if (open === 'alt_accounts')
