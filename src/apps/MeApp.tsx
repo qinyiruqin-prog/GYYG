@@ -12,8 +12,9 @@ import { DataScreen } from './DataScreen';
 import { AssetsScreen } from './AssetsScreen';
 import { CharacterScreen } from './CharacterScreen';
 import { THEMES } from '../themes';
-import type { AppSettings, PersistShape, UserIdentity, MusicTrack, AlbumImage } from '../types';
+import type { AppSettings, PersistShape, UserIdentity, MusicTrack, AlbumImage, Sticker } from '../types';
 import { applyTheme } from '../themes';
+import { uid } from '../utils';
 
 type Sub = null | 'api' | 'preset' | 'theme' | 'identity' | 'partition' | 'data' | 'assets' | 'characters' | 'about';
 
@@ -32,6 +33,8 @@ export function MeApp({
 }) {
   const [sub, setSub] = useState<Sub>(null);
   const [about, setAbout] = useState(false);
+  const [showStickerManager, setShowStickerManager] = useState(false);
+  const [stickerInput, setStickerInput] = useState('');
 
   const activeUser = settings.users.find((u) => u.id === settings.activeUserId) ?? settings.users[0];
   const themeName = THEMES.find((t) => t.id === settings.themeId)?.name ?? '水墨黑白';
@@ -326,6 +329,12 @@ export function MeApp({
       <div className="text-[13px] font-medium mb-2 mt-4 txt-accent">其他</div>
       <ListGroup>
         <Row label={<Menu icon={<Info size={17} />} text="关于" />} onClick={() => setAbout(true)} right={<ChevronRight size={18} className="txt-faint" />} />
+        <Row
+          label={<Menu icon={<Sparkles size={17} />} text="表情包管理" />}
+          hint={`${(settings.stickers || []).length} 个表情`}
+          onClick={() => setShowStickerManager(true)}
+          right={<ChevronRight size={18} className="txt-faint" />}
+        />
       </ListGroup>
 
       <div className="font-title text-sm txt-dim mb-2 px-1 mt-5">身份与角色</div>
@@ -342,6 +351,76 @@ export function MeApp({
           <p>羊羊机是一个网页版手机风格 AI 角色聊天系统。</p>
           <p>完全模拟真实手机交互，兼容 OpenAI 格式接口，数据本地保存。</p>
           <p className="txt-faint text-[12px]">当前为阶段一至三：桌面框架 + API 配置 + 身份系统</p>
+        </div>
+      </Modal>
+
+      {/* 表情包管理模态框 */}
+      <Modal open={showStickerManager} onClose={() => { setShowStickerManager(false); setStickerInput(''); }} title="表情包管理">
+        <div className="space-y-4">
+          {/* 导入新表情 */}
+          <div>
+            <label className="text-[12px] txt-faint block mb-1.5">导入表情包（支持图床链接，兼容 JPG/PNG/GIF/WebP 等格式）</label>
+            <div className="flex gap-2">
+              <input
+                value={stickerInput}
+                onChange={(e) => setStickerInput(e.target.value)}
+                placeholder="粘贴或输入图床链接..."
+                className="flex-1 glass rounded-xl px-3 h-11 text-[14px] outline-none bg-transparent"
+              />
+              <button
+                onClick={() => {
+                  const url = stickerInput.trim();
+                  if (!url) return;
+                  const newSticker: Sticker = {
+                    id: uid(),
+                    url,
+                    addedAt: Date.now(),
+                  };
+                  updateSettings({ stickers: [...(settings.stickers || []), newSticker] });
+                  setStickerInput('');
+                }}
+                disabled={!stickerInput.trim()}
+                className="tap h-11 px-4 rounded-xl font-medium text-[13px] text-white disabled:opacity-40 shrink-0"
+                style={{ background: 'var(--accent)', color: 'var(--bg)' }}
+              >
+                导入
+              </button>
+            </div>
+          </div>
+
+          {/* 已有表情包列表 */}
+          <div>
+            <label className="text-[12px] txt-faint block mb-1.5">已导入的表情包（{(settings.stickers || []).length} 个）</label>
+            <div className="grid grid-cols-4 gap-2 max-h-[300px] overflow-y-auto no-scrollbar">
+              {(settings.stickers || []).map((s) => (
+                <div key={s.id} className="relative group">
+                  <img
+                    src={s.url}
+                    alt={s.name || '表情'}
+                    className="w-full aspect-square object-cover rounded-xl glass p-1"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <button
+                    onClick={() => {
+                      updateSettings({ stickers: (settings.stickers || []).filter((x) => x.id !== s.id) });
+                    }}
+                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {(settings.stickers || []).length === 0 && (
+                <div className="col-span-4 text-center py-8 txt-faint text-[13px]">还没有导入表情包</div>
+              )}
+            </div>
+          </div>
+
+          <div className="text-[11px] txt-faint leading-relaxed bg-neutral-900/50 rounded-xl p-3 border border-neutral-800">
+            <strong className="txt-accent">提示：</strong>支持任意图床链接，如 Sm.ms、Imgur、GitHub 等。
+            支持 JPG、PNG、GIF（动图）、WebP 等常见格式。
+            点击已导入表情右上角的 × 可以删除。
+          </div>
         </div>
       </Modal>
     </AppScreen>

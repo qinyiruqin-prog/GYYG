@@ -1076,6 +1076,7 @@ function ChatConversation({
   const [callMessages, setCallMessages] = useState<ChatMessage[]>([]);
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [viewingCallRecord, setViewingCallRecord] = useState<CallRecord | null>(null);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const endRef = useRef<HTMLDivElement>(null);
@@ -2182,6 +2183,22 @@ ${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子�
             🎙️ 发送语音
           </button>
           <button
+            onClick={() => {
+              setShowPlusMenu(false);
+              const stickers = settings.stickers || [];
+              if (stickers.length === 0) {
+                setToast('还没有表情包，去「我的」导入吧');
+                setTimeout(() => setToast(null), 3000);
+                return;
+              }
+              // 已在下文添加表情包选择模态框
+              setShowStickerPicker(true);
+            }}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            😄 表情包
+          </button>
+          <button
             onClick={() => startCall('video')}
             className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
           >
@@ -2212,6 +2229,36 @@ ${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子�
           >
             发送语音
           </button>
+        </div>
+      </Modal>
+
+      {/* 表情包选择面板 */}
+      <Modal open={showStickerPicker} onClose={() => setShowStickerPicker(false)} title="选择表情包">
+        <div className="grid grid-cols-4 gap-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+          {(settings.stickers || []).map((s) => (
+            <button
+              key={s.id}
+              onClick={() => {
+                const userMsg: ChatMessage = {
+                  id: uid(),
+                  role: 'user',
+                  content: '[表情包]',
+                  ts: Date.now(),
+                  media: [{ kind: 'image', url: s.url }],
+                };
+                onSend([...thread.messages, userMsg]);
+                setShowStickerPicker(false);
+              }}
+              className="tap aspect-square rounded-xl glass p-1 hover:ring-2 hover:ring-[var(--accent)] transition-all overflow-hidden"
+            >
+              <img src={s.url} alt="表情" className="w-full h-full object-cover rounded-lg" />
+            </button>
+          ))}
+          {(settings.stickers || []).length === 0 && (
+            <div className="col-span-4 text-center py-12 txt-faint text-[13px]">
+              还没有表情包，去「我的」导入吧
+            </div>
+          )}
         </div>
       </Modal>
 

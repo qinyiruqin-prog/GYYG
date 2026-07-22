@@ -766,6 +766,7 @@ export interface AppSettings {
   weightGoals?: WeightGoal[]; // 体重目标
   dailyGoals?: DailyGoal[]; // 打卡目标
   phoneCheckRecords?: PhoneCheckRecord[]; // 查手机记录
+  stickers?: Sticker[]; // 表情包
 
   // 功能开关
   offlineMode?: boolean; // 线下模式开关
@@ -788,6 +789,13 @@ export interface InstalledWebApp {
   name: string;
   url: string;
   emoji: string;
+}
+
+export interface Sticker {
+  id: ID;
+  url: string; // 图床链接
+  name?: string; // 可选的表情包名称
+  addedAt: number; // 添加时间
 }
 
 export interface PeriodRecord {
