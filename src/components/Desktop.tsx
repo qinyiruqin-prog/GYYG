@@ -317,9 +317,9 @@ function Page3({
   return (
     <div className="space-y-4">
       {/* Period Caring Words Widget */}
-      <div 
+      <div
         onClick={() => onOpenApp('period')}
-        className="glass rounded-[24px] p-4 border border-neutral-800/40 text-left space-y-3 cursor-pointer hover:border-neutral-700/60 transition-all shadow-lg shadow-pink-500/5 relative overflow-hidden"
+        className="glass rounded-[24px] p-4 border border-pink-500/20 text-left space-y-3 cursor-pointer hover:border-pink-500/40 transition-all shadow-lg shadow-pink-500/10 relative overflow-hidden"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-[12px] text-pink-400 font-bold">
@@ -332,12 +332,12 @@ function Page3({
           )}
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-neutral-950/40 border border-neutral-900 space-y-2">
-          <p className="text-[12px] text-neutral-200 font-medium leading-relaxed">
+        <div className="p-3.5 rounded-2xl bg-pink-500/5 border border-pink-500/10 space-y-2">
+          <p className="text-[12px] text-pink-200 font-medium leading-relaxed">
             {caringMessage}
           </p>
           {latestRecord && (
-            <div className="text-[10px] text-neutral-500 flex items-center justify-between pt-1">
+            <div className="text-[10px] text-pink-300/70 flex items-center justify-between pt-1">
               <span>预计下次还有：{daysUntilNext} 天</span>
               <span>周期规律：{cycleDays}天</span>
             </div>
