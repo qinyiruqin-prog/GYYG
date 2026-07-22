@@ -1068,10 +1068,13 @@ function ChatConversation({
   const [thinkingMsg, setThinkingMsg] = useState<string | null>(null);
   const [showChatSettings, setShowChatSettings] = useState(false);
   const [showInteractMenu, setShowInteractMenu] = useState(false);
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const endRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapTime = useRef<number>(0);
+  const lastAvatarTapTime = useRef<{[key: string]: number}>({});
 
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [showTranslation, setShowTranslation] = useState<Record<string, boolean>>({});
@@ -1392,12 +1395,54 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
       <div className="flex flex-col h-full overflow-hidden">
         <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-3 space-y-3">
           {thread.messages.map((m) => (
-            <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={m.id} className={`flex gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {/* 角色头像 - 左侧 */}
+              {m.role === 'assistant' && (
+                <div
+                  onPointerDown={() => {
+                    const now = Date.now();
+                    const key = 'assistant';
+                    if (now - (lastAvatarTapTime.current[key] || 0) < 300) {
+                      // 双击角色头像 - 拍一拍角色
+                      if (activeInteractEnabled !== false) {
+                        sendActive('用户刚刚拍了拍你，请根据你的人设，以你独特的风格拍回去或说点什么。也可以选择发张生活照或者发段语音。', `我 👏 拍了拍 ${thread.charAltName || char.name}`);
+                      }
+                      lastAvatarTapTime.current[key] = 0;
+                    } else {
+                      lastAvatarTapTime.current[key] = now;
+                    }
+                  }}
+                  className="flex-shrink-0 cursor-pointer"
+                >
+                  {char.avatar ? (
+                    <img src={char.avatar} className="w-10 h-10 rounded-full object-cover" alt="" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold">
+                      {char.name[0]}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 消息内容 */}
               <div
-                onPointerDown={() => startLongPress(m)}
+                onClick={() => {
+                  if (multiSelectMode) {
+                    setSelectedMessages(prev => {
+                      const next = new Set(prev);
+                      if (next.has(m.id)) {
+                        next.delete(m.id);
+                      } else {
+                        next.add(m.id);
+                      }
+                      return next;
+                    });
+                  }
+                }}
+                onPointerDown={() => !multiSelectMode && startLongPress(m)}
                 onPointerUp={cancelLongPress}
                 onPointerLeave={cancelLongPress}
-                className={`max-w-[78%] space-y-2 ${m.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}
+                className={`max-w-[78%] space-y-2 ${m.role === 'user' ? 'items-end' : 'items-start'} flex flex-col ${multiSelectMode ? 'cursor-pointer' : ''} ${selectedMessages.has(m.id) ? 'opacity-50 ring-2 ring-[var(--accent)] rounded-2xl' : ''}`}
               >
                 {m.content && (
                   <div className="flex flex-col gap-1 items-start w-full">
@@ -1416,11 +1461,38 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
                         {translations[m.id]}
                       </div>
                     )}
-                    {/* Action trigger row - 已隐藏，翻译功能移至设置中的自动翻译 */}
                   </div>
                 )}
                 {m.media?.map((md, i) => <MediaBubble key={i} media={md} />)}
               </div>
+
+              {/* 用户头像 - 右侧 */}
+              {m.role === 'user' && (
+                <div
+                  onPointerDown={() => {
+                    const now = Date.now();
+                    const key = 'user';
+                    if (now - (lastAvatarTapTime.current[key] || 0) < 300) {
+                      // 双击用户头像 - 角色拍一拍用户
+                      if (activeInteractEnabled !== false) {
+                        sendActive(`${thread.charAltName || char.name}突然拍了拍你，请根据你的人设，以你独特的风格回应这个拍一拍，可以说点俏皮话或者发表情。`);
+                      }
+                      lastAvatarTapTime.current[key] = 0;
+                    } else {
+                      lastAvatarTapTime.current[key] = now;
+                    }
+                  }}
+                  className="flex-shrink-0 cursor-pointer"
+                >
+                  {currentUser?.avatar ? (
+                    <img src={currentUser.avatar} className="w-10 h-10 rounded-full object-cover" alt="" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white font-bold">
+                      {currentUser?.nickname?.[0] || '我'}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           {loading && (
@@ -1432,32 +1504,72 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
           )}
           <div ref={endRef} />
         </div>
+
+        {/* 多选模式工具栏 */}
+        {multiSelectMode && (
+          <div className="px-3 py-2 border-t border-[var(--border)] flex items-center gap-2 bg-neutral-900/50 shrink-0">
+            <button
+              onClick={() => {
+                setMultiSelectMode(false);
+                setSelectedMessages(new Set());
+              }}
+              className="px-3 py-1.5 rounded-lg glass txt-dim hover:txt-accent transition-colors text-[13px]"
+            >
+              取消
+            </button>
+            <div className="flex-1 text-center text-[13px] txt-faint">
+              已选择 {selectedMessages.size} 条消息
+            </div>
+            <button
+              onClick={() => {
+                if (selectedMessages.size > 0 && confirm(`确定删除 ${selectedMessages.size} 条消息？`)) {
+                  const nextMsgs = thread.messages.filter((m) => !selectedMessages.has(m.id));
+                  onSend(nextMsgs);
+                  setMultiSelectMode(false);
+                  setSelectedMessages(new Set());
+                }
+              }}
+              disabled={selectedMessages.size === 0}
+              className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors text-[13px] disabled:opacity-40"
+            >
+              删除
+            </button>
+            <button
+              onClick={() => {
+                if (selectedMessages.size > 0) {
+                  // 重新回复：删除选中消息之后的所有消息，然后重新生成
+                  const selectedArray = Array.from(selectedMessages);
+                  const lastSelectedIndex = Math.max(...selectedArray.map(id => thread.messages.findIndex(m => m.id === id)));
+                  const nextMsgs = thread.messages.slice(0, lastSelectedIndex);
+                  onSend(nextMsgs);
+                  setMultiSelectMode(false);
+                  setSelectedMessages(new Set());
+                  // 触发重新生成
+                  setTimeout(() => send(), 100);
+                }
+              }}
+              disabled={selectedMessages.size === 0}
+              className="px-3 py-1.5 rounded-lg bg-[var(--accent)]/20 txt-accent hover:bg-[var(--accent)]/30 transition-colors text-[13px] disabled:opacity-40"
+            >
+              重新回复
+            </button>
+          </div>
+        )}
+
         <div className="px-3 py-2 border-t border-[var(--border)] flex items-center gap-2 shrink-0 bg-neutral-950/20">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && send()}
-            placeholder={`对 ${thread.charAltName || char.name} 说…`}
+            onKeyDown={(e) => e.key === 'Enter' && !multiSelectMode && send()}
+            placeholder={multiSelectMode ? '多选模式中...' : `对 ${thread.charAltName || char.name} 说…`}
             className="flex-1 glass rounded-full px-4 h-10 text-[14px] outline-none bg-transparent placeholder:text-[var(--text-faint)]"
+            disabled={multiSelectMode}
             onPointerDown={(e) => {
-              // 双击检测
-              const now = Date.now();
-              if (now - lastTapTime.current < 300) {
-                // 双击触发拍一拍
-                e.preventDefault();
-                if (activeInteractEnabled !== false) {
-                  sendActive('用户刚刚拍了拍你，请根据你的人设，以你独特的风格拍回去或说点什么。也可以选择发张生活照或者发段语音。', `我 👏 拍了拍 ${thread.charAltName || char.name}`);
-                }
-                lastTapTime.current = 0;
-              } else {
-                lastTapTime.current = now;
-                // 长按检测
-                inputLongPressTimer.current = setTimeout(() => {
-                  if (activeInteractEnabled !== false) {
-                    setShowInteractMenu(true);
-                  }
-                }, 500);
-              }
+              if (multiSelectMode) return;
+              // 长按触发多选模式
+              inputLongPressTimer.current = setTimeout(() => {
+                setMultiSelectMode(true);
+              }, 500);
             }}
             onPointerUp={() => {
               if (inputLongPressTimer.current) {
@@ -1470,7 +1582,7 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
               }
             }}
           />
-          <button onClick={send} disabled={loading || !input.trim()} className="tap w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-40 shrink-0" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><Send size={18} /></button>
+          <button onClick={send} disabled={loading || !input.trim() || multiSelectMode} className="tap w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-40 shrink-0" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><Send size={18} /></button>
         </div>
       </div>
 
