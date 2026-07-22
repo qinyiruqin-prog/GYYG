@@ -14,5 +14,6 @@ export { TwitterScreen } from './TwitterScreen';
 export { MemoryScreen } from './MemoryScreen';
 export { WeightManageScreen } from './WeightManageScreen';
 export { KitchenScreen } from './KitchenScreen';
+export { ClosetScreen } from './ClosetScreen';
 
 // 所有核心v3.0功能已从单独文件导出

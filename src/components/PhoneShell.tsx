@@ -50,6 +50,7 @@ import {
   DiscoverScreen,
   AltAccountsScreen,
   KitchenScreen,
+  ClosetScreen,
 } from '../apps/V3NewApps';
 import { Sheet } from './Sheet';
 import { useMusicPlayer } from '../useMusicPlayer';
@@ -721,6 +722,16 @@ export function PhoneShell({
         />
       );
     if (open === 'discover') return <DiscoverScreen onBack={goHome} />;
+    if (open === 'closet')
+      return (
+        <ClosetScreen
+          api={settings.api}
+          characters={settings.characters}
+          outfits={settings.outfits || []}
+          onChange={(outfits) => updateSettings({ outfits })}
+          onBack={goHome}
+        />
+      );
     if (open === 'alt_accounts')
       return (
         <AltAccountsScreen
