@@ -551,7 +551,12 @@ export function PhoneShell({
           api={settings.api}
           me={settings.users.find((u) => u.id === settings.activeUserId) ?? settings.users[0]}
           posts={settings.forumPosts}
+          characters={settings.characters}
           onChange={(forumPosts) => updateSettings({ forumPosts })}
+          onRefresh={async () => {
+            // 触发自动刷新逻辑，这里可以调用 AI 生成新帖子
+            console.log('论坛刷新触发');
+          }}
           onBack={goHome}
         />
       );
@@ -689,6 +694,15 @@ export function PhoneShell({
           useRealTime={settings.useRealTime !== false}
           customTime={settings.customTime || ''}
           onUpdateSetting={(key, value) => updateSettings({ [key]: value })}
+          onBack={goHome}
+        />
+      );
+
+    if (open === 'time_perception')
+      return (
+        <TimePerceptionScreen
+          settings={settings}
+          updateSettings={updateSettings}
           onBack={goHome}
         />
       );

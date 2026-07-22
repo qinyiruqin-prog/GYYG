@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Plus, Search, Eye, MessageSquare, Pin, Trash2, Send, Sparkles } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Plus, Search, Eye, MessageSquare, Pin, Trash2, Send, Sparkles, RefreshCcw } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { Modal, Confirm } from '../components/Sheet';
 import { ListGroup, Row } from '../components/ui';
 import { uid } from '../utils';
 import { askAI } from '../api';
-import type { ApiConfig, ForumPost, UserIdentity } from '../types';
+import type { ApiConfig, ForumPost, UserIdentity, Character } from '../types';
 
 const BOARDS = ['综合', '技术', '日常', '故事', '求助'];
 
@@ -13,13 +13,17 @@ export function ForumScreen({
   api,
   me,
   posts,
+  characters,
   onChange,
+  onRefresh,
   onBack,
 }: {
   api: ApiConfig;
   me?: UserIdentity;
   posts: ForumPost[];
+  characters: Character[];
   onChange: (p: ForumPost[]) => void;
+  onRefresh: () => Promise<void>;
   onBack: () => void;
 }) {
   const [board, setBoard] = useState('综合');
@@ -31,6 +35,15 @@ export function ForumScreen({
   const [body, setBody] = useState('');
   const [aiWriting, setAiWriting] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [selectedAuthor, setSelectedAuthor] = useState<{ id: string; name: string; avatar?: string } | null>(me ? { id: me.id, name: me.nickname, avatar: me.avatar } : null);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await onRefresh();
+    setRefreshing(false);
+  };
 
   const filtered = posts.filter((p) => (board === '综合' || p.board === board) && (p.title.includes(q) || p.body.includes(q)));
   const sorted = [...filtered].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.ts - a.ts);
@@ -38,36 +51,37 @@ export function ForumScreen({
   const update = (id: string, fn: (p: ForumPost) => ForumPost) => onChange(posts.map((p) => p.id === id ? fn(p) : p));
 
   const publish = () => {
-    if (!title.trim()) return;
-    const p: ForumPost = { id: uid(), title: title.trim(), authorName: me?.nickname ?? '匿名', authorAvatar: me?.avatar, body: body.trim(), board: board === '综合' ? '日常' : board, views: 0, replies: [], ts: Date.now() };
+    if (!title.trim() || !selectedAuthor) return;
+    const p: ForumPost = { id: uid(), title: title.trim(), authorName: selectedAuthor.name, authorAvatar: selectedAuthor.avatar, body: body.trim(), board: board === '综合' ? '日常' : board, views: 0, replies: [], ts: Date.now() };
     onChange([p, ...posts]); setTitle(''); setBody(''); setComposing(false);
   };
 
   const aiPost = async () => {
     setAiWriting(true);
     try {
-      const sys = '你在模拟论坛发帖。请生成一个有趣的帖子，标题+正文，正文100-200字，口语化。只输出"标题\n正文"，不要额外解释。';
+      const sys = `你在模拟论坛发帖。角色：${selectedAuthor?.name || '匿名'}。请生成一个有趣的帖子，标题+正文，正文100-200字，口语化。只输出"标题\n正文"，不要额外解释。`;
       const raw = await askAI(api, sys, `板块：${board === '综合' ? '日常' : board}\n请生成一条帖子：`, { temperature: 0.9, maxTokens: 400 });
       const [t, ...rest] = raw.split('\n');
-      const p: ForumPost = { id: uid(), title: t.trim(), authorName: 'AI用户', body: rest.join('\n').trim(), board: board === '综合' ? '日常' : board, views: Math.floor(Math.random()*200), replies: [], ts: Date.now() };
+      const p: ForumPost = { id: uid(), title: t.trim(), authorName: selectedAuthor?.name || 'AI', authorAvatar: selectedAuthor?.avatar, body: rest.join('\n').trim(), board: board === '综合' ? '日常' : board, views: Math.floor(Math.random()*200), replies: [], ts: Date.now() };
       onChange([p, ...posts]); setComposing(false);
     } catch (e) { alert(`AI生成失败：${(e as Error).message}`); }
     finally { setAiWriting(false); }
   };
 
   const reply = (p: ForumPost) => {
-    if (!replyText.trim()) return;
-    update(p.id, (x) => ({ ...x, replies: [...x.replies, { id: uid(), authorName: me?.nickname ?? '匿名', authorAvatar: me?.avatar, text: replyText.trim(), ts: Date.now() }] }));
+    if (!replyText.trim() || !selectedAuthor) return;
+    const r = { id: uid(), authorName: selectedAuthor.name, authorAvatar: selectedAuthor.avatar, text: replyText.trim(), ts: Date.now() };
+    update(p.id, (x) => ({ ...x, replies: [...x.replies, r] }));
     setReplyText('');
-    setActive((a) => a ? { ...a, replies: [...a.replies, { id: uid(), authorName: me?.nickname ?? '匿名', authorAvatar: me?.avatar, text: replyText.trim(), ts: Date.now() }] } : a);
+    setActive((a) => a ? { ...a, replies: [...a.replies, r] } : a);
   };
 
   const aiReply = async (p: ForumPost) => {
     setAiWriting(true);
     try {
-      const sys = '你在论坛回帖，以网友身份简短回复，10-50字，口语化。只输出回复内容。';
+      const sys = `你在论坛回帖，以网友身份简短回复，10-50字，口语化。角色：${selectedAuthor?.name || '网友'}. 只输出回复内容。`;
       const text = await askAI(api, sys, `帖子标题：${p.title}\n正文：${p.body}\n请回复：`, { temperature: 0.9, maxTokens: 100 });
-      const r = { id: uid(), authorName: 'AI网友', text: text.trim(), ts: Date.now() };
+      const r = { id: uid(), authorName: selectedAuthor?.name || '网友', authorAvatar: selectedAuthor?.avatar, text: text.trim(), ts: Date.now() };
       update(p.id, (x) => ({ ...x, replies: [...x.replies, r] }));
       setActive((a) => a ? { ...a, replies: [...a.replies, r] } : a);
     } catch (e) { alert(`生成失败：${(e as Error).message}`); }
@@ -79,7 +93,7 @@ export function ForumScreen({
   if (active) {
     const p = posts.find((x) => x.id === active.id) ?? active;
     return (
-      <AppScreen title={p.title} onBack={() => setActive(null)} noPad right={<button onClick={() => del(p)} className="tap txt-dim"><Trash2 size={18} /></button>}>
+      <AppScreen title={p.title} onBack={() => setActive(null)} noPad right={<div><button onClick={handleRefresh} className="tap txt-dim mr-3"><RefreshCcw size={18} className={refreshing ? 'animate-spin' : ''} /></button><button onClick={() => del(p)} className="tap txt-dim"><Trash2 size={18} /></button></div>}>
         <div className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-4">
             <div className="font-title text-lg mb-2">{p.title}</div>
@@ -115,6 +129,7 @@ export function ForumScreen({
   return (
     <AppScreen title="论坛" onBack={onBack} right={<button onClick={() => setComposing(true)} className="tap text-[var(--accent)]"><Plus size={22} /></button>}>
       <div className="flex gap-1.5 mb-3 overflow-x-auto no-scrollbar">
+        <button onClick={handleRefresh} className="tap shrink-0 w-8 h-8 rounded-full glass flex items-center justify-center txt-accent"><RefreshCcw size={16} className={refreshing ? 'animate-spin' : ''} /></button>
         {BOARDS.map((b) => <button key={b} onClick={() => setBoard(b)} className={`tap shrink-0 px-3 h-8 rounded-full text-[12px] ${board === b ? 'icon-bg-active txt-accent font-medium' : 'glass txt-dim'}`}>{b}</button>)}
       </div>
       <div className="flex items-center gap-2 glass rounded-xl px-3 h-10 mb-4"><Search size={16} className="txt-faint" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索帖子" className="flex-1 bg-transparent outline-none text-[14px]" /></div>
@@ -135,6 +150,15 @@ export function ForumScreen({
       )}
 
       <Modal open={composing} onClose={() => setComposing(false)} title="发帖">
+        <div className="text-[12px] txt-dim mb-1">选择角色：</div>
+        <select value={selectedAuthor?.id} onChange={(e) => {
+          const char = characters.find(c => c.id === e.target.value);
+          if (char) setSelectedAuthor({ id: char.id, name: char.name, avatar: char.avatar });
+          else if (me && e.target.value === me.id) setSelectedAuthor({ id: me.id, name: me.nickname, avatar: me.avatar });
+        }} className="w-full glass rounded-xl px-3 h-11 text-[14px] outline-none bg-transparent mb-3">
+          {me && <option value={me.id}>{me.nickname} (我)</option>}
+          {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
         <div className="text-[12px] txt-dim mb-1">板块：{board === '综合' ? '日常' : board}</div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="标题" className="w-full glass rounded-xl px-3 h-11 text-[14px] outline-none bg-transparent mb-3" autoFocus />
         <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="正文" rows={5} className="w-full glass rounded-xl px-3 py-2.5 text-[14px] outline-none bg-transparent resize-none mb-3" />

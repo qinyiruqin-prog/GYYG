@@ -1,17 +1,15 @@
-import React from 'react';
 import { AppScreen } from '../components/AppScreen';
 import { ListGroup, Row } from '../components/ui';
-import { Clock, MapPin, Check } from 'lucide-react';
+import { Clock, MapPin, Globe } from 'lucide-react';
 import type { AppSettings } from '../types';
 
-const COUNTRIES = [
-  { name: '中国 (China)', timezone: 'Asia/Shanghai' },
-  { name: '美国 (USA)', timezone: 'America/New_York' },
-  { name: '日本 (Japan)', timezone: 'Asia/Tokyo' },
-  { name: '英国 (UK)', timezone: 'Europe/London' },
-  { name: '法国 (France)', timezone: 'Europe/Paris' },
-  { name: '德国 (Germany)', timezone: 'Europe/Berlin' },
-  { name: '澳大利亚 (Australia)', timezone: 'Australia/Sydney' },
+const TIMEZONES = [
+  { name: '北京 (Beijing)', value: 'Asia/Shanghai' },
+  { name: '纽约 (New York)', value: 'America/New_York' },
+  { name: '东京 (Tokyo)', value: 'Asia/Tokyo' },
+  { name: '伦敦 (London)', value: 'Europe/London' },
+  { name: '巴黎 (Paris)', value: 'Europe/Paris' },
+  { name: '悉尼 (Sydney)', value: 'Australia/Sydney' },
 ];
 
 export function TimePerceptionScreen({
@@ -25,52 +23,56 @@ export function TimePerceptionScreen({
 }) {
   return (
     <AppScreen title="时间感知" onBack={onBack}>
-      <div className="space-y-4 p-4">
+      <div className="p-4 space-y-6">
+        {/* 感知开关 */}
         <ListGroup>
           <Row
-            label="感知真实时间"
-            icon={<Clock size={17} />}
-            hint={settings.useRealTime !== false ? '开启' : '关闭'}
+            label="时间感知"
+            icon={<Clock size={18} className="txt-accent" />}
             right={
-              <input
-                type="checkbox"
-                checked={settings.useRealTime !== false}
-                onChange={(e) => updateSettings({ useRealTime: e.target.checked })}
-                className="w-5 h-5 accent-[var(--accent)] cursor-pointer"
-              />
+              <button
+                onClick={() => updateSettings({ useRealTime: !(settings.useRealTime !== false) })}
+                className={`w-12 h-6 rounded-full transition-colors flex items-center px-1 ${
+                  settings.useRealTime !== false ? 'bg-[var(--accent)] justify-end' : 'bg-neutral-600 justify-start'
+                }`}
+              >
+                <div className="w-4 h-4 bg-white rounded-full" />
+              </button>
             }
           />
         </ListGroup>
 
-        {!settings.useRealTime && (
-          <div className="space-y-3 p-4 glass rounded-xl border border-[var(--border)]">
+        {/* 自定义时间设置 (仅在关闭感知时可见) */}
+        {settings.useRealTime === false && (
+          <div className="glass rounded-xl p-4 space-y-3">
             <label className="text-[12px] txt-dim block">自定义时间 (ISO格式)</label>
             <input
               type="datetime-local"
-              value={settings.customTime || ''}
-              onChange={(e) => updateSettings({ customTime: e.target.value })}
-              className="w-full glass rounded-xl px-3 h-10 text-[13px] outline-none bg-transparent border border-[var(--border)]"
+              value={settings.customTime ? settings.customTime.slice(0, 16) : ''}
+              onChange={(e) => updateSettings({ customTime: new Date(e.target.value).toISOString() })}
+              className="w-full glass rounded-lg px-3 h-10 text-[13px] outline-none bg-transparent border border-[var(--border)]"
             />
           </div>
         )}
 
-        <div className="text-[13px] font-medium mb-2 mt-4 txt-accent">地区时区</div>
+        {/* 时区设置 */}
+        <div className="text-[13px] font-medium txt-accent">地区时区</div>
         <ListGroup>
-          {COUNTRIES.map((ct) => (
+          {TIMEZONES.map((tz) => (
             <Row
-              key={ct.name}
-              label={ct.name}
-              icon={<MapPin size={16} />}
-              onClick={() => updateSettings({ timezone: ct.timezone })}
-              right={settings.timezone === ct.timezone ? <Check size={16} className="text-[var(--accent)]" /> : null}
+              key={tz.value}
+              label={tz.name}
+              icon={<Globe size={16} className="txt-faint" />}
+              onClick={() => updateSettings({ timezone: tz.value })}
+              right={settings.timezone === tz.value ? <CheckIcon /> : null}
             />
           ))}
         </ListGroup>
-
-        <div className="text-[11px] txt-faint mt-4 px-2 italic">
-          开启“感知真实时间”后，AI 将自动获取所选地区的当前时间进行对话互动。关闭则使用你手动设定的自定义时间。
-        </div>
       </div>
     </AppScreen>
   );
+}
+
+function CheckIcon() {
+  return <div className="w-5 h-5 rounded-full bg-[var(--accent)] flex items-center justify-center text-[var(--bg)]">✓</div>;
 }

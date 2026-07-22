@@ -111,13 +111,25 @@ export const defaultSettings = (): AppSettings => ({
 export function loadState(): PersistShape {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { version: 1, settings: defaultSettings() };
+    if (!raw) {
+      console.log('📂 首次加载，使用默认设置');
+      return { version: 1, settings: defaultSettings() };
+    }
     const parsed = JSON.parse(raw) as PersistShape;
     const defs = defaultSettings();
     if (!parsed.settings) parsed.settings = defs;
-    // shallow merge to fill new fields
+
+    // 深度合并，确保所有字段都存在
     parsed.settings = { ...defs, ...parsed.settings };
     parsed.settings.api = { ...defs.api, ...parsed.settings.api };
+
+    // 确保关键数组字段存在且是数组
+    if (!Array.isArray(parsed.settings.characters)) parsed.settings.characters = [];
+    if (!Array.isArray(parsed.settings.worldEntries)) parsed.settings.worldEntries = [];
+    if (!Array.isArray(parsed.settings.forumPosts)) parsed.settings.forumPosts = [];
+
+    console.log(`📂 加载数据: 角色 ${parsed.settings.characters.length} 个, 世界书 ${parsed.settings.worldEntries.length} 条, 论坛帖子 ${parsed.settings.forumPosts.length} 个`);
+
     // ensure presets/activePresetId exist (added in redesign)
     if (!parsed.settings.presets) parsed.settings.presets = [];
     if (!parsed.settings.activePresetId) parsed.settings.activePresetId = null;
@@ -192,16 +204,27 @@ export function loadState(): PersistShape {
       balance: typeof c.balance === 'number' ? c.balance : 1500 + (idx * 250) % 1200,
     }));
     return parsed;
-  } catch {
+  } catch (err) {
+    console.error('❌ 加载数据失败:', err);
     return { version: 1, settings: defaultSettings() };
   }
 }
 
 export function saveState(state: PersistShape) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    const serialized = JSON.stringify(state);
+    const sizeInMB = (new Blob([serialized]).size / 1024 / 1024).toFixed(2);
+    console.log(`[💾 保存] 数据大小: ${sizeInMB}MB, 角色数: ${state.settings.characters?.length || 0}, 世界书条目: ${state.settings.worldEntries?.length || 0}`);
+    localStorage.setItem(KEY, serialized);
+    console.log('✅ 数据保存成功');
   } catch (e) {
-    console.warn('save failed', e);
+    console.error('❌ 保存失败:', e);
+    // 如果是 QuotaExceededError，尝试清理旧数据
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      alert('存储空间不足！数据可能无法保存。请导出备份后清理数据。');
+    } else {
+      console.warn('save failed', e);
+    }
   }
 }
 
