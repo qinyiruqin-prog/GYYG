@@ -47,6 +47,9 @@ export function WeiboScreen({
   const [commentText, setCommentText] = useState('');
   const [detail, setDetail] = useState<SocialPost | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [trendingRefreshing, setTrendingRefreshing] = useState(false);
+  const [trendingPosts, setTrendingPosts] = useState<SocialPost[]>([]);
+  const [selectedTrending, setSelectedTrending] = useState<string>('');
 
   const weiboPosts = posts.filter((p) => p.platform === 'weibo').sort((a, b) => b.ts - a.ts);
 
@@ -56,10 +59,51 @@ export function WeiboScreen({
     try {
       const npcPosts = generateNPCPostBatch(characters, posts, 'weibo');
       onChange([...posts, ...npcPosts]);
-      // 延迟一下以显示刷新动画
       await new Promise(resolve => setTimeout(resolve, 800));
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  // 热搜话题点击：生成该话题的帖子
+  const handleTrendingClick = async (trendingTitle: string) => {
+    setSelectedTrending(trendingTitle);
+    setTrendingRefreshing(true);
+    try {
+      const sys = `你在模拟微博用户发微博，话题是"${trendingTitle}"。内容口语化真实，20-150字，必须带话题标签#${trendingTitle}#，可以带emoji。只输出正文。`;
+      const text = await askAI(api, sys, `请根据"${trendingTitle}"这个热搜话题发一条微博：`, { temperature: 0.9, maxTokens: 200 });
+
+      // 生成5-8条关于这个话题的帖子
+      const newPosts: SocialPost[] = [];
+      for (let i = 0; i < (Math.random() > 0.5 ? 5 : 8); i++) {
+        const char = characters[Math.floor(Math.random() * characters.length)];
+        newPosts.push({
+          id: uid(),
+          platform: 'weibo',
+          authorId: char?.id ?? `user-${i}`,
+          authorName: char?.name ?? `网友${i}`,
+          authorAvatar: char?.avatar,
+          content: `${text}\n#${trendingTitle}#`,
+          likes: Math.floor(Math.random() * 200) + 10,
+          reposts: Math.floor(Math.random() * 100),
+          comments: [],
+          ts: Date.now() - Math.random() * 3600000,
+        });
+      }
+
+      setTrendingPosts(newPosts);
+      await new Promise(resolve => setTimeout(resolve, 600));
+    } catch (e) {
+      alert(`加载话题失败：${(e as Error).message}`);
+    } finally {
+      setTrendingRefreshing(false);
+    }
+  };
+
+  // 热搜刷新
+  const handleTrendingRefresh = () => {
+    if (selectedTrending) {
+      handleTrendingClick(selectedTrending);
     }
   };
 
@@ -263,25 +307,72 @@ export function WeiboScreen({
       {/* trending */}
       {tab === 'trending' && (
         <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-3">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={18} className="txt-accent" />
-            <div className="text-[14px] txt-dim">实时热搜榜</div>
-          </div>
-          <div className="space-y-2">
-            {TRENDING_TOPICS.map((t) => (
-              <div key={t.rank} className="glass rounded-xl p-3 flex items-center gap-3">
-                <div className={`text-[18px] font-bold w-6 text-center ${t.rank <= 3 ? 'txt-accent' : 'txt-faint'}`}>{t.rank}</div>
-                <div className="flex-1">
-                  <div className="text-[14px] font-medium flex items-center gap-1.5">
-                    {t.title}
-                    {t.tag === 'hot' && <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-500">热</span>}
-                    {t.tag === 'new' && <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-500">新</span>}
-                  </div>
-                  <div className="text-[11px] txt-faint mt-0.5">{t.heat}</div>
+          {selectedTrending && trendingPosts.length > 0 ? (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <button onClick={() => { setSelectedTrending(''); setTrendingPosts([]); }} className="tap text-[14px] txt-accent mb-2">← 返回热搜</button>
+                  <div className="text-[18px] font-bold">#{selectedTrending}#</div>
                 </div>
+                <button onClick={handleTrendingRefresh} disabled={trendingRefreshing} className="tap flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-[13px] disabled:opacity-50">
+                  <RefreshCw size={14} className={trendingRefreshing ? 'animate-spin' : ''} />
+                  {trendingRefreshing ? '加载中…' : '刷新'}
+                </button>
               </div>
-            ))}
-          </div>
+              <div className="divide-y divide-[var(--border)]">
+                {trendingPosts.map((p) => (
+                  <div key={p.id} className="tap glass rounded-2xl p-3.5 my-2" onClick={() => setDetail(p)}>
+                    <div className="flex items-start gap-2.5 mb-2">
+                      {p.authorAvatar ? (
+                        <img src={p.authorAvatar} className="w-10 h-10 rounded-full object-cover shrink-0" alt="" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full icon-bg flex items-center justify-center text-[14px] txt-accent shrink-0">{p.authorName[0]}</div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[14px] font-medium">{p.authorName}</div>
+                        <div className="text-[12px] txt-faint">{new Date(p.ts).toLocaleString('zh-CN')}</div>
+                      </div>
+                    </div>
+                    <div className="text-[14px] mb-2 leading-relaxed txt-dim whitespace-pre-wrap line-clamp-4">{p.content}</div>
+                    <div className="flex items-center gap-4 text-[12px] txt-faint">
+                      <div className="flex items-center gap-1"><Heart size={14} /> {p.likes}</div>
+                      <div className="flex items-center gap-1"><MessageCircle size={14} /> {p.comments?.length || 0}</div>
+                      <div className="flex items-center gap-1"><Repeat2 size={14} /> {p.reposts}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={18} className="txt-accent" />
+                  <div className="text-[14px] txt-dim">实时热搜榜</div>
+                </div>
+                <button onClick={() => setTrendingRefreshing(!trendingRefreshing)} disabled={trendingRefreshing} className="tap flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-[13px] disabled:opacity-50">
+                  <RefreshCw size={14} className={trendingRefreshing ? 'animate-spin' : ''} />
+                  {trendingRefreshing ? '加载中…' : '刷新'}
+                </button>
+              </div>
+              <div className="space-y-2">
+                {TRENDING_TOPICS.map((t) => (
+                  <div key={t.rank} className="tap glass rounded-xl p-3 flex items-center gap-3" onClick={() => handleTrendingClick(t.title)}>
+                    <div className={`text-[18px] font-bold w-6 text-center ${t.rank <= 3 ? 'txt-accent' : 'txt-faint'}`}>{t.rank}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14px] font-medium flex items-center gap-1.5">
+                        {t.title}
+                        {t.tag === 'hot' && <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-500">热</span>}
+                        {t.tag === 'new' && <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-500">新</span>}
+                      </div>
+                      <div className="text-[12px] txt-faint">{t.heat} 讨论</div>
+                    </div>
+                    <TrendingUp size={16} className="txt-faint shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
