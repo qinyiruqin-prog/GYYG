@@ -301,23 +301,15 @@ function Page2({
                   )}
                   style={day === today ? { background: 'var(--accent)', color: 'var(--bg)' } : undefined}
                 >
-                  {/* 经期日粉色圆圈标记 */}
-                  {isPeriodDay(day) && (
-                    <span
-                      className="absolute inset-0 rounded-full"
-                      style={{ border: '2px solid #f472b6', opacity: day === today ? 0.6 : 0.35 }}
-                    />
-                  )}
-                  {/* 排卵日特殊标记 */}
-                  {isOvulationDay(day) && (
-                    <span
-                      className="absolute -top-0.5 left-1/2 -translate-x-1/2 text-[8px]"
-                      style={{ color: '#818cf8' }}
-                    >
-                      🌸
-                    </span>
-                  )}
                   {day}
+                  {/* 经期：下方玫红色小圆点 */}
+                  {isPeriodDay(day) && (
+                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-pink-500" />
+                  )}
+                  {/* 排卵日：上方樱花 */}
+                  {isOvulationDay(day) && (
+                    <span className="absolute -top-1 left-1/2 -translate-x-1/2 text-[8px]">🌸</span>
+                  )}
                 </div>
               )}
             </div>
