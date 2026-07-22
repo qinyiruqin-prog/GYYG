@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { ChefHat, Plus, Clock, TrendingUp, Star, Users, Camera } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { Modal } from '../components/Sheet';
+import { CookingGame } from '../components/CookingGame';
 import { uid } from '../utils';
 import { askAIJson } from '../api';
-import type { ApiConfig, Recipe, CookingRecord, Character } from '../types';
+import type { ApiConfig, Recipe, CookingRecord, Character, Memory } from '../types';
 
 const SAMPLE_IMAGES = [
   'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400',
@@ -28,16 +29,20 @@ export function KitchenScreen({
   characters,
   recipes,
   records,
+  memories,
   onChange,
   onChangeRecords,
+  onChangeMemories,
   onBack,
 }: {
   api: ApiConfig;
   characters: Character[];
   recipes: Recipe[];
   records: CookingRecord[];
+  memories: Memory[];
   onChange: (r: Recipe[]) => void;
   onChangeRecords: (r: CookingRecord[]) => void;
+  onChangeMemories: (m: Memory[]) => void;
   onBack: () => void;
 }) {
   const [tab, setTab] = useState<'recipes' | 'records'>('recipes');
@@ -45,6 +50,7 @@ export function KitchenScreen({
   const [addingRecord, setAddingRecord] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [detail, setDetail] = useState<Recipe | null>(null);
+  const [cookingRecipe, setCookingRecipe] = useState<Recipe | null>(null);
 
   // 菜谱表单
   const [name, setName] = useState('');
@@ -127,6 +133,67 @@ export function KitchenScreen({
     setResult('success');
     setTaste(5);
     setAddingRecord(false);
+  };
+
+  const handleCookingComplete = (result: { result: 'success' | 'normal' | 'failed'; taste: number; selectedChefs: string[] }) => {
+    const recipe = allRecipes.find((r) => r.id === cookingRecipe?.id);
+    if (!recipe) return;
+
+    // 创建烹饪记录
+    result.selectedChefs.forEach((chefId) => {
+      const rec: CookingRecord = {
+        id: uid(),
+        recipeId: recipe.id,
+        cookId: chefId,
+        result: result.result,
+        taste: result.taste,
+        ts: Date.now(),
+      };
+      onChangeRecords([...records, rec]);
+
+      // 生成角色反馈并存入记忆
+      const chef = characters.find((c) => c.id === chefId);
+      if (chef) {
+        const feedback = generateChefFeedback(recipe, result, chef);
+        const memory: Memory = {
+          id: uid(),
+          characterId: chefId,
+          type: 'conversation',
+          title: `品尝了 ${recipe.name}`,
+          content: feedback,
+          importance: result.result === 'success' ? 80 : result.result === 'normal' ? 60 : 40,
+          tags: ['烹饪', '用餐', recipe.name],
+          ts: Date.now(),
+        };
+        onChangeMemories([...memories, memory]);
+      }
+    });
+
+    setCookingRecipe(null);
+    alert(`${result.selectedChefs.length} 位客人品尝了你的 ${recipe.name}！`);
+  };
+
+  const generateChefFeedback = (recipe: Recipe, result: { result: 'success' | 'normal' | 'failed'; taste: number }, chef: Character): string => {
+    const feedbacks = {
+      success: [
+        `天哪！这是我吃过最好吃的 ${recipe.name}！我爱死这个味道了！`,
+        `哇！这道菜做得太棒了！你一定是天生的厨师。`,
+        `完美！这正是我想吃的 ${recipe.name}，谢谢你💕`,
+      ],
+      normal: [
+        `嗯，这道菜还不错！再练习一下会更好。`,
+        `有点意思呢。不过火候再控制一下就更完美了。`,
+        `不错，我很欣赏你的努力。下次一起再做吧！`,
+      ],
+      failed: [
+        `呃...这...我还是点外卖吧。不过没关系，下次一定会更好！`,
+        `哈哈，虽然不太成功，但我很感谢你的心意。`,
+        `这...有点困难呢。要不要我教你一些技巧？`,
+      ],
+    };
+
+    const feedbackList = feedbacks[result.result];
+    return feedbackList[Math.floor(Math.random() * feedbackList.length)];
   };
 
   // 详情页
@@ -239,7 +306,7 @@ export function KitchenScreen({
             {allRecipes.map((r) => {
               const diffInfo = DIFFICULTY_LABELS[r.difficulty];
               return (
-                <div key={r.id} className="tap glass rounded-2xl overflow-hidden" onClick={() => setDetail(r)}>
+                <div key={r.id} className="tap glass rounded-2xl overflow-hidden" onClick={() => setCookingRecipe(r)}>
                   <img src={r.image} className="w-full aspect-[4/3] object-cover" alt="" />
                   <div className="p-3">
                     <div className="text-[14px] font-medium mb-2 line-clamp-1">{r.name}</div>
@@ -337,6 +404,16 @@ export function KitchenScreen({
         </div>
         <button onClick={addRecord} disabled={!recipeId || !cookId} className="tap w-full h-11 rounded-full font-medium text-[var(--bg)] disabled:opacity-50" style={{ background: 'var(--accent)' }}>记录</button>
       </Modal>
+
+      {/* 烹饪游戏 */}
+      {cookingRecipe && (
+        <CookingGame
+          recipe={cookingRecipe}
+          characters={characters}
+          onComplete={handleCookingComplete}
+          onCancel={() => setCookingRecipe(null)}
+        />
+      )}
     </AppScreen>
   );
 }

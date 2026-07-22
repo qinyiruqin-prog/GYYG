@@ -673,8 +673,10 @@ export function PhoneShell({
           characters={settings.characters}
           recipes={settings.recipes || []}
           records={settings.cookingRecords || []}
+          memories={settings.memories || []}
           onChange={(recipes) => updateSettings({ recipes })}
           onChangeRecords={(cookingRecords) => updateSettings({ cookingRecords })}
+          onChangeMemories={(memories) => updateSettings({ memories })}
           onBack={goHome}
         />
       );
