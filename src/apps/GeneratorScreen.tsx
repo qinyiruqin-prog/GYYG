@@ -1,13 +1,69 @@
-import React, { useState } from 'react';
-import { Sparkles, Wand2, User, UserRound, BookMarked, Check, Loader2, Download, RefreshCw } from 'lucide-react';
-import { AppScreen } from '../components/AppScreen';
-import { PrimaryButton } from '../components/ui';
-import { Modal } from '../components/Sheet';
-import { uid } from '../utils';
-import { generatePersonaPack, type GeneratedPack } from '../api';
-import type { ApiConfig, Character, UserIdentity, WorldEntry } from '../types';
+import React, { useState, useEffect } from "react";
+import { GeneratedSetting, SettingType } from "./generator/types";
+import { PersonaForm } from "./generator/PersonaForm";
+import { MarkdownRenderer } from "./generator/MarkdownRenderer";
+import { SavedLibrary } from "./generator/SavedLibrary";
+import { AppScreen } from "../components/AppScreen";
+import { uid } from "../utils";
+import type { ApiConfig, Character, UserIdentity, WorldEntry } from "../types";
+import { askAI } from "../api";
+import { Sparkles, ArrowLeft, ArrowRight } from "lucide-react";
 
-const WORD_OPTIONS = [1000, 1200, 1500, 1800, 2000];
+const LOCAL_STORAGE_KEY = "persona_generator_saved_settings_v1";
+
+const SYSTEM_PROMPTS: Record<string, (wc: number, style: string, tone: string, extra: string) => string> = {
+  user_persona: (wc, style, tone, extra) => [
+    "你是一名专业的角色设定师，负责为用户生成用户人设 (User Persona)。",
+    "根据用户提供的关键词、描述或风格基调，生成一份完整、细致的人设设定。",
+    "",
+    "输出结构（Markdown 格式，保留 H2 标题）：",
+    "## 1. 基本信息 (姓名、性别、年龄、外貌/穿着风格)",
+    "## 2. 性格特点 (核心性格、优点、缺点、小习惯/怪癖)",
+    "## 3. 背景故事 (成长经历、影响一生的关键事件)",
+    "## 4. 人际关系 (重要家庭成员、朋友、死敌或导师关系)",
+    "## 5. 说话风格与口头禅 (语调特点、标志性口头禅、说话习惯)",
+    "## 6. 兴趣爱好与技能 (日常特长、核心专业技能、业余兴趣)",
+    "## 7. 其他细节 (随身携带物品、害怕的事物、最大愿望)",
+    "",
+    "字数：" + wc + "字。风格：" + (style || "自然写实") + "。语调：" + (tone || "自然") + "。",
+    extra ? "额外自定义字段：" + extra : "",
+    "内容具体、充满画面感，避免空洞名词堆砌。",
+  ].join("\n"),
+
+  xr_persona: (wc, style, tone, extra) => [
+    "你是一名专业的虚拟角色（Char/AI伴侣）设定师。",
+    "根据用户提供的关键词或描述，生成完整Char角色设定。",
+    "",
+    "输出结构（Markdown 格式，保留 H2 标题）：",
+    "## 1. 基本信息 (姓名、身份/种族、外貌特征，适合立绘/建模参考)",
+    "## 2. 性格与情感模式 (核心性格、情绪反应、对用户态度、情感边界)",
+    "## 3. 背景设定 (世界观来源、身份定位、与用户的相识/绑定关系)",
+    "## 4. 互动风格 (语言口癖、表情动作习惯、互动红线/安全边界)",
+    "## 5. 特殊设定 (独特技能/异能、限制/无法做到之事、独特之处)",
+    "## 6. 场景适配建议 (适合场景、彩蛋指令、互动建议)",
+    "",
+    "字数：" + wc + "字。风格：" + (style || "自然写实") + "。语调：" + (tone || "自然") + "。",
+    extra ? "额外自定义字段：" + extra : "",
+  ].join("\n"),
+
+  worldbook: (wc, style, tone, extra) => [
+    "你是一名专业的世界观设定师，负责生成世界书 (Worldbook)。",
+    "根据用户提供的关键词或描述，生成逻辑自洽、细节详实的世界观背景。",
+    "",
+    "输出结构（Markdown 格式，保留 H2 标题）：",
+    "## 1. 世界观概述 (时代背景、科技/魔法水平、基调与氛围)",
+    "## 2. 地理与环境 (版图划分、核心地点、势力范围、生态特色)",
+    "## 3. 社会体系 (政治结构、阶层划分、种族、宗教/社会势力)",
+    "## 4. 历史脉络 (三个关键历史事件及其深远影响)",
+    "## 5. 特殊规则 (魔法/科技规律与限制，确保逻辑自洽)",
+    "## 6. 重要设定条目 (专有名词/术语、传奇物品、核心组织)",
+    "## 7. 与角色/剧情关联提示 (成长线暗示、剧本杀剧情切入点)",
+    "",
+    "字数：" + wc + "字。风格：" + (style || "自然写实") + "。语调：" + (tone || "自然") + "。",
+    extra ? "额外自定义字段：" + extra : "",
+    "逻辑严密自洽、细节丰富、条目清晰。",
+  ].join("\n"),
+};
 
 export function GeneratorScreen({
   api,
@@ -22,245 +78,230 @@ export function GeneratorScreen({
   onAddWorldEntries: (e: WorldEntry[]) => void;
   onBack: () => void;
 }) {
-  const [keyword, setKeyword] = useState('');
-  const [wordCount, setWordCount] = useState(1500);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
-  const [result, setResult] = useState<GeneratedPack | null>(null);
-  const [saved, setSaved] = useState<{ char?: boolean; user?: boolean; world?: boolean }>({});
-  const [preview, setPreview] = useState<'char' | 'user' | 'world' | null>(null);
+  const [activeTab, setActiveTab] = useState<"create" | "library" | "help">("create");
+  const [savedSettings, setSavedSettings] = useState<GeneratedSetting[]>([]);
+  const [currentSetting, setCurrentSetting] = useState<GeneratedSetting | null>(null);
+  const [currentVersionIdx, setCurrentVersionIdx] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [refineLoading, setRefineLoading] = useState<boolean>(false);
+  const [feedbackText, setFeedbackText] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [copied, setCopied] = useState<boolean>(false);
 
-  const run = async () => {
-    if (!keyword.trim()) { setErr('请输入关键词'); return; }
-    if (!api.chat.baseUrl) { setErr('请先在「我的 → API 配置」中配置 Chat API'); return; }
-    setLoading(true); setErr(''); setResult(null); setSaved({});
+  useEffect(() => {
     try {
-      const pack = await generatePersonaPack(api, keyword.trim(), wordCount);
-      if (!pack.char?.name) throw new Error('生成结果不完整，请重试');
-      setResult(pack);
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) setSavedSettings(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const updateSavedSettings = (newSettings: GeneratedSetting[]) => {
+    setSavedSettings(newSettings);
+    try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newSettings)); } catch {}
+  };
+
+  const triggerToast = (msg: string) => {
+    setSuccessToast(msg);
+    setTimeout(() => setSuccessToast(null), 3000);
+  };
+
+  const copyToClipboard = (text: string) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        triggerToast("已复制到剪贴板！");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(() => {});
+    } catch {}
+  };
+
+  const handleGenerate = async (config: {
+    type: SettingType;
+    prompt: string;
+    wordCount: number;
+    customStyle: string;
+    tone: string;
+    customStructure: string;
+  }) => {
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const sysFn = SYSTEM_PROMPTS[config.type];
+      const systemPrompt = sysFn ? sysFn(config.wordCount, config.customStyle, config.tone, config.customStructure) : SYSTEM_PROMPTS.user_persona(config.wordCount, config.customStyle, config.tone, config.customStructure);
+
+      const content = await askAI(api, systemPrompt, config.prompt, { temperature: 0.85, maxTokens: config.wordCount * 2 });
+
+      const newSetting: GeneratedSetting = {
+        id: uid(),
+        type: config.type,
+        title: config.prompt.slice(0, 30),
+        prompt: config.prompt,
+        content,
+        createdAt: new Date().toISOString(),
+        wordCount: config.wordCount,
+        customStyle: config.customStyle,
+        tone: config.tone,
+        customStructure: config.customStructure,
+        versions: [{ timestamp: new Date().toISOString(), content }],
+      };
+      setCurrentSetting(newSetting);
+      setCurrentVersionIdx(0);
+      updateSavedSettings([newSetting, ...savedSettings]);
+      triggerToast("生成成功！");
     } catch (e) {
-      setErr((e as Error).message || '生成失败');
+      setErrorMessage((e as Error).message || "生成失败");
     } finally {
       setLoading(false);
     }
   };
 
-  const saveChar = () => {
-    if (!result) return;
-    const c: Character = {
-      id: uid(),
-      name: result.char.name,
-      avatar: '',
-      signature: result.char.signature || '',
-      persona: result.char.persona,
-      greeting: result.char.greeting || `你好，我是${result.char.name}。`,
-      imagePromptTemplate: result.char.imagePromptTemplate || '',
-      createdAt: Date.now(),
-    };
-    onAddCharacter(c);
-    setSaved((s) => ({ ...s, char: true }));
-  };
-  const saveUser = () => {
-    if (!result) return;
-    const u: UserIdentity = {
-      id: uid(),
-      nickname: result.user.nickname || 'User',
-      signature: result.user.signature || '',
-      imagePromptTemplate: result.user.imagePromptTemplate || '',
-      isAlt: false,
-      createdAt: Date.now(),
-    };
-    onAddUser(u);
-    setSaved((s) => ({ ...s, user: true }));
-  };
-  const saveWorld = () => {
-    if (!result) return;
-    const entries: WorldEntry[] = (result.world ?? []).map((w) => ({
-      id: uid(),
-      key: w.key,
-      content: w.content,
-      priority: w.priority ?? 0,
-    }));
-    onAddWorldEntries(entries);
-    setSaved((s) => ({ ...s, world: true }));
-  };
-  const saveAll = () => { saveChar(); saveUser(); saveWorld(); };
+  const handleRefine = async () => {
+    if (!currentSetting || !feedbackText.trim()) return;
+    setRefineLoading(true);
+    setErrorMessage(null);
+    try {
+      const refinePrompt = "当前设定：\n" + currentSetting.content + "\n\n用户反馈：" + feedbackText + "\n\n请根据用户反馈，对当前设定进行改进和完善。保持原有的Markdown结构和标题。只输出改进后的完整设定。";
+      const refined = await askAI(api, "", refinePrompt, { temperature: 0.8, maxTokens: currentSetting.wordCount * 2 });
 
-  const ready = !!result;
+      const newVersion = { timestamp: new Date().toISOString(), content: refined, feedback: feedbackText };
+      const updatedSetting = {
+        ...currentSetting,
+        content: refined,
+        versions: [...currentSetting.versions, newVersion],
+      };
+      setCurrentSetting(updatedSetting);
+      setCurrentVersionIdx(updatedSetting.versions.length - 1);
+      setFeedbackText("");
+      triggerToast("迭代优化成功！");
+    } catch (e) {
+      setErrorMessage((e as Error).message || "优化失败");
+    } finally {
+      setRefineLoading(false);
+    }
+  };
+
+  const goToVersion = (idx: number) => {
+    if (!currentSetting || idx < 0 || idx >= currentSetting.versions.length) return;
+    setCurrentSetting({ ...currentSetting, content: currentSetting.versions[idx].content });
+    setCurrentVersionIdx(idx);
+  };
+
+  const importToGYYG = () => {
+    if (!currentSetting) return;
+    const content = currentSetting.content;
+
+    if (currentSetting.type === "user_persona") {
+      onAddUser({ id: uid(), nickname: currentSetting.title, signature: content.slice(0, 50), imagePromptTemplate: "", isAlt: false, createdAt: Date.now() });
+      triggerToast("已导入为用户身份！");
+    } else if (currentSetting.type === "xr_persona") {
+      onAddCharacter({
+        id: uid(), name: currentSetting.title, avatar: "", signature: content.slice(0, 50),
+        persona: content, greeting: "你好！我是" + currentSetting.title + "。",
+        imagePromptTemplate: "", createdAt: Date.now(),
+      });
+      triggerToast("已导入为角色！");
+    } else if (currentSetting.type === "worldbook") {
+      const entries: WorldEntry[] = [{ id: uid(), key: currentSetting.title, content, priority: 5, partitionId: "", ts: Date.now() }];
+      onAddWorldEntries(entries);
+      triggerToast("已导入为世界书词条！");
+    }
+  };
 
   return (
-    <AppScreen title="人设生成器" onBack={onBack}>
-      <div className="text-[12px] txt-faint mb-4 leading-relaxed">
-        输入关键词，AI 一键生成配套的 <span className="txt-accent">AI 角色卡</span>、<span className="txt-accent">用户人设卡</span> 与 <span className="txt-accent">世界书词条</span>，可直接保存到本机使用。
-      </div>
-
-      {/* Input */}
-      <div className="glass rounded-2xl p-4 space-y-4 mb-4">
-        <div>
-          <div className="text-[12px] txt-dim mb-1.5 flex items-center gap-1.5"><Wand2 size={13} /> 关键词 / 主题描述</div>
-          <textarea
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="例：赛博朋克世界的黑客少女、古代书院的清冷夫子、末日废土里的流浪商人…"
-            rows={2}
-            className="w-full glass rounded-xl px-3 py-2.5 text-[14px] outline-none resize-none bg-transparent placeholder:text-[var(--text-faint)]"
-          />
+    <AppScreen title="人设生成" icon="🔮" onBack={onBack}>
+      <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div className="flex border-b border-[var(--border)] mb-3 relative shrink-0">
+          <button onClick={() => setActiveTab("create")} className={"flex-1 py-2.5 text-center text-[14px] font-medium relative transition-colors " + (activeTab === "create" ? "txt-accent" : "txt-faint")}>
+            🔮 创建
+            {activeTab === "create" && <div className="absolute bottom-0 inset-x-8 h-0.5 rounded-full" style={{ background: "var(--accent)" }} />}
+          </button>
+          <button onClick={() => setActiveTab("library")} className={"flex-1 py-2.5 text-center text-[14px] font-medium relative transition-colors " + (activeTab === "library" ? "txt-accent" : "txt-faint")}>
+            📚 库 ({savedSettings.length})
+            {activeTab === "library" && <div className="absolute bottom-0 inset-x-8 h-0.5 rounded-full" style={{ background: "var(--accent)" }} />}
+          </button>
+          <button onClick={() => setActiveTab("help")} className={"flex-1 py-2.5 text-center text-[14px] font-medium relative transition-colors " + (activeTab === "help" ? "txt-accent" : "txt-faint")}>
+            ❓ 帮助
+            {activeTab === "help" && <div className="absolute bottom-0 inset-x-8 h-0.5 rounded-full" style={{ background: "var(--accent)" }} />}
+          </button>
         </div>
-        <div>
-          <div className="text-[12px] txt-dim mb-1.5">生成字数范围</div>
-          <div className="flex flex-wrap gap-2">
-            {WORD_OPTIONS.map((w) => (
-              <button
-                key={w}
-                onClick={() => setWordCount(w)}
-                className={`tap px-3.5 h-9 rounded-full text-[13px] transition-all ${wordCount === w ? 'text-white' : 'glass txt-dim'}`}
-                style={wordCount === w ? { background: 'var(--accent)' } : undefined}
-              >
-                {w}字
-              </button>
-            ))}
+
+        {activeTab === "create" && (
+          <div className="space-y-4 px-4 pb-4">
+            <PersonaForm onSubmit={handleGenerate} loading={loading} />
+
+            {errorMessage && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">{errorMessage}</div>
+            )}
+
+            {currentSetting && (
+              <div className="mt-4 glass rounded-2xl p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-[15px] font-semibold">{currentSetting.title}</div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => copyToClipboard(currentSetting.content)} className="text-[11px] px-3 py-1 rounded-full glass txt-dim hover:txt-accent transition-colors">
+                      {copied ? "✅ 已复制" : "📋 复制"}
+                    </button>
+                    <button onClick={importToGYYG} className="text-[11px] px-3 py-1 rounded-full font-medium text-white" style={{ background: "var(--accent)", color: "var(--bg)" }}>
+                      📥 导入
+                    </button>
+                  </div>
+                </div>
+
+                {currentSetting.versions.length > 1 && (
+                  <div className="flex items-center gap-2 text-[12px]">
+                    <button onClick={() => goToVersion(currentVersionIdx - 1)} disabled={currentVersionIdx <= 0} className="tap txt-dim disabled:opacity-30"><ArrowLeft size={14} /></button>
+                    <span className="txt-faint">v{currentVersionIdx + 1}/{currentSetting.versions.length}</span>
+                    <button onClick={() => goToVersion(currentVersionIdx + 1)} disabled={currentVersionIdx >= currentSetting.versions.length - 1} className="tap txt-dim disabled:opacity-30"><ArrowRight size={14} /></button>
+                  </div>
+                )}
+
+                <MarkdownRenderer content={currentSetting.content} onChangeContent={(newContent) => setCurrentSetting({ ...currentSetting, content: newContent })} />
+
+                <div className="space-y-2">
+                  <textarea
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    placeholder="输入反馈来迭代优化生成的设定..."
+                    className="w-full h-20 glass rounded-xl px-3 py-2 text-[13px] outline-none bg-transparent resize-none"
+                  />
+                  <button onClick={handleRefine} disabled={refineLoading || !feedbackText.trim()} className="tap w-full h-10 rounded-full font-medium text-[13px] text-white disabled:opacity-40" style={{ background: "var(--accent)", color: "var(--bg)" }}>
+                    {refineLoading ? "优化中..." : "🔄 反馈优化"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-        {err && <div className="text-[12px] text-[var(--danger)] text-center">{err}</div>}
-        <PrimaryButton onClick={run} disabled={loading || !keyword.trim()}>
-          {loading ? (
-            <span className="flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> 正在生成…</span>
-          ) : (
-            <span className="flex items-center justify-center gap-2"><Sparkles size={16} /> 生成人设卡</span>
-          )}
-        </PrimaryButton>
+        )}
+
+        {activeTab === "library" && (
+          <div className="px-4 pb-4">
+            <SavedLibrary items={savedSettings} onSelectItem={(item) => { setCurrentSetting(item); setCurrentVersionIdx(item.versions.length - 1); setActiveTab("create"); }} onDeleteItem={(id) => updateSavedSettings(savedSettings.filter((s) => s.id !== id))} />
+          </div>
+        )}
+
+        {activeTab === "help" && (
+          <div className="px-4 pb-4 glass rounded-2xl p-4 text-[13px] txt-dim space-y-2">
+            <div className="font-semibold txt-accent mb-2">使用说明</div>
+            <div>1. 选择生成类型：用户人设、Char/AI伴侣虚拟人设、世界书</div>
+            <div>2. 输入核心提示词/角色描述</div>
+            <div>3. 调整期望生成字数（200-20000字）</div>
+            <div>4. 可选填入风格、语调、自定义字段</div>
+            <div>5. 点击生成按钮开始创建</div>
+            <div>6. 生成后可以复制、导入到羊羊机，或发送反馈迭代优化</div>
+            <div className="mt-3 txt-faint">使用您自己的 API（在「我的」设置）进行生成。</div>
+          </div>
+        )}
       </div>
 
-      {/* Results */}
-      {ready && result && (
-        <div className="space-y-3 animate-fade-in">
-          {/* Char card */}
-          <ResultCard
-            icon={<User size={15} />}
-            title="AI 角色卡"
-            name={result.char.name}
-            subtitle={result.char.signature}
-            onPreview={() => setPreview('char')}
-            saved={saved.char}
-            onSave={saveChar}
-          />
-          {/* User card */}
-          <ResultCard
-            icon={<UserRound size={15} />}
-            title="用户人设卡"
-            name={result.user.nickname}
-            subtitle={result.user.signature}
-            onPreview={() => setPreview('user')}
-            saved={saved.user}
-            onSave={saveUser}
-          />
-          {/* World entries */}
-          <ResultCard
-            icon={<BookMarked size={15} />}
-            title="世界书词条"
-            name={`${result.world?.length ?? 0} 条词条`}
-            subtitle={result.world?.map((w) => w.key).join('、') || '无'}
-            onPreview={() => setPreview('world')}
-            saved={saved.world}
-            onSave={saveWorld}
-          />
-
-          <div className="flex gap-3 pt-1">
-            <button onClick={run} className="tap flex-1 h-11 rounded-full glass text-[14px] flex items-center justify-center gap-2 txt-dim">
-              <RefreshCw size={15} /> 重新生成
-            </button>
-            <button
-              onClick={saveAll}
-              className="tap flex-1 h-11 rounded-full font-medium text-[14px] flex items-center justify-center gap-2 text-[var(--bg)]"
-              style={{ background: 'var(--accent)' }}
-            >
-              <Download size={15} /> 全部保存
-            </button>
+      {successToast && (
+        <div className="absolute bottom-20 inset-x-0 flex justify-center z-50 pointer-events-none">
+          <div className="glass-strong rounded-full px-4 py-2 text-[13px] animate-fade-in flex items-center gap-2">
+            <Sparkles size={14} className="txt-accent" /> {successToast}
           </div>
         </div>
       )}
-
-      {/* Preview modal */}
-      <Modal
-        open={!!preview}
-        onClose={() => setPreview(null)}
-        title={preview === 'char' ? 'AI 角色卡' : preview === 'user' ? '用户人设卡' : '世界书词条'}
-      >
-        {preview === 'char' && result && (
-          <div className="space-y-3">
-            <Field label="角色名" value={result.char.name} />
-            <Field label="签名" value={result.char.signature} />
-            <Field label="开场白" value={result.char.greeting} />
-            <Field label="外观生图提示词" value={result.char.imagePromptTemplate} />
-            <div>
-              <div className="text-[12px] txt-dim mb-1">人设</div>
-              <div className="glass rounded-xl p-3 text-[13px] leading-relaxed txt-dim whitespace-pre-wrap max-h-[40vh] overflow-y-auto no-scrollbar">{result.char.persona}</div>
-            </div>
-          </div>
-        )}
-        {preview === 'user' && result && (
-          <div className="space-y-3">
-            <Field label="昵称" value={result.user.nickname} />
-            <Field label="签名" value={result.user.signature} />
-            <Field label="图片提示词模板" value={result.user.imagePromptTemplate} />
-          </div>
-        )}
-        {preview === 'world' && result && (
-          <div className="space-y-2.5 max-h-[55vh] overflow-y-auto no-scrollbar">
-            {(result.world ?? []).map((w, i) => (
-              <div key={i} className="glass rounded-xl p-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[13px] font-medium txt-accent">{w.key}</span>
-                  <span className="text-[10px] txt-faint px-1.5 py-0.5 rounded-full glass">优先级 {w.priority}</span>
-                </div>
-                <div className="text-[12px] leading-relaxed txt-dim">{w.content}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Modal>
     </AppScreen>
-  );
-}
-
-function ResultCard({
-  icon, title, name, subtitle, onPreview, onSave, saved,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  name: string;
-  subtitle: string;
-  onPreview: () => void;
-  onSave: () => void;
-  saved?: boolean;
-}) {
-  return (
-    <div className="glass rounded-2xl p-3.5 flex items-center gap-3">
-      <div className="w-9 h-9 rounded-xl icon-bg flex items-center justify-center shrink-0">
-        <span className="icon-color">{icon}</span>
-      </div>
-      <button onClick={onPreview} className="flex-1 text-left min-w-0 tap">
-        <div className="text-[12px] txt-faint">{title}</div>
-        <div className="text-[15px] font-medium truncate">{name}</div>
-        <div className="text-[12px] txt-faint truncate">{subtitle}</div>
-      </button>
-      <button
-        onClick={onSave}
-        disabled={saved}
-        className={`tap h-9 px-3 rounded-full text-[12px] font-medium flex items-center gap-1.5 shrink-0 transition-all ${saved ? 'glass txt-accent' : 'text-[var(--bg)]'}`}
-        style={!saved ? { background: 'var(--accent)' } : undefined}
-      >
-        {saved ? <><Check size={14} /> 已保存</> : '保存'}
-      </button>
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[12px] txt-dim mb-1">{label}</div>
-      <div className="glass rounded-xl p-3 text-[13px] leading-relaxed whitespace-pre-wrap">{value || '（空）'}</div>
-    </div>
   );
 }
