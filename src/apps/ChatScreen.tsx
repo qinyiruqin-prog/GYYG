@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Plus, MessageCircle, Trash2, Play, Pause, Eye, Mic, Sparkles, X, UserCheck, UserX, UserPlus, Smile, RefreshCw, Layers } from 'lucide-react';
+import { Send, Plus, MessageCircle, Trash2, Play, Pause, Eye, Mic, Sparkles, X, UserCheck, UserX, UserPlus, Smile, RefreshCw, Layers, Settings, Wifi, WifiOff } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { Modal, Confirm } from '../components/Sheet';
 import { ListGroup, Row } from '../components/ui';
@@ -65,6 +65,9 @@ export function ChatScreen({
   }, [initialThreadId, onClearInitialThreadId]);
 
   const [pickingChar, setPickingChar] = useState(false);
+  const [pickingForGroup, setPickingForGroup] = useState(false);
+  const [selectedGroupChars, setSelectedGroupChars] = useState<string[]>([]);
+  const [groupName, setGroupName] = useState('');
   const [confirmDel, setConfirmDel] = useState<ChatThread | null>(null);
   const [confirmDelAll, setConfirmDelAll] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -109,7 +112,7 @@ export function ChatScreen({
   const startChat = (charId: string) => {
     const char = characters.find((c) => c.id === charId);
     if (!char) return;
-    const existing = myThreads.find((t) => t.characterId === charId && !t.charAltName);
+    const existing = myThreads.find((t) => t.characterId === charId && !t.charAltName && !t.isGroup);
     if (existing) { setActiveThreadId(existing.id); setPickingChar(false); return; }
     const t: ChatThread = {
       id: uid(),
@@ -121,6 +124,38 @@ export function ChatScreen({
     onChange([t, ...threads]);
     setActiveThreadId(t.id);
     setPickingChar(false);
+  };
+
+  const createGroupChat = () => {
+    if (selectedGroupChars.length < 2) {
+      setToast('请至少选择2个角色创建群聊');
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    const finalGroupName = groupName.trim() || selectedGroupChars.map(id => characters.find(c => c.id === id)?.name).filter(Boolean).join('、');
+    const t: ChatThread = {
+      id: uid(),
+      characterId: selectedGroupChars[0], // 主角色ID
+      userId: activeUserId || undefined,
+      isGroup: true,
+      groupMembers: selectedGroupChars,
+      groupName: finalGroupName,
+      messages: [{
+        id: uid(),
+        role: 'assistant',
+        content: `欢迎来到群聊「${finalGroupName}」！`,
+        ts: Date.now()
+      }],
+      updatedAt: Date.now(),
+    };
+    onChange([t, ...threads]);
+    setActiveThreadId(t.id);
+    setPickingForGroup(false);
+    setSelectedGroupChars([]);
+    setGroupName('');
+    setToast(`群聊「${finalGroupName}」创建成功！`);
+    setTimeout(() => setToast(null), 3000);
   };
 
   const handleQuickCreateUser = () => {
@@ -311,6 +346,7 @@ export function ChatScreen({
         activeInteractMode={activeInteractMode}
         activeInteractEnabled={activeInteractEnabled}
         onUpdateSettings={updateSettings}
+        onUpdateThread={(updater) => updateThread(active.id, updater)}
         onSend={(msgs) => updateThread(active.id, (t) => ({ ...t, messages: msgs, updatedAt: Date.now() }))}
         onBack={() => setActiveThreadId(null)}
         onDelete={() => { onChange(threads.filter((t) => t.id !== active.id)); setActiveThreadId(null); }}
@@ -382,15 +418,30 @@ export function ChatScreen({
                 const c = characters.find((x) => x.id === t.characterId);
                 const last = t.messages[t.messages.length - 1];
                 const unreadEvents = storyEvents.filter((e) => e.characterId === t.characterId && !e.consumed).length;
-                const labelName = t.charAltName ? `${t.charAltName} (试探小号)` : (c?.name ?? '未知角色');
-                const labelAvatar = t.charAltAvatar ? (
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-neutral-800 border border-neutral-700 select-none">
-                    {t.charAltAvatar}
-                  </div>
-                ) : (
-                  c?.avatar ? <img src={c.avatar} className="w-10 h-10 rounded-full object-cover" alt="" /> : <div className="w-10 h-10 rounded-full icon-bg flex items-center justify-center"><MessageCircle size={18} className="icon-color" /></div>
-                );
-                
+
+                // 群聊显示逻辑
+                let labelName = '';
+                let labelAvatar: React.ReactNode;
+
+                if (t.isGroup) {
+                  labelName = `${t.groupName || '群聊'} (${t.groupMembers?.length || 0}人)`;
+                  labelAvatar = (
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-gradient-to-br from-purple-500 to-pink-500 border border-neutral-700 select-none">
+                      👥
+                    </div>
+                  );
+                } else if (t.charAltName) {
+                  labelName = `${t.charAltName} (试探小号)`;
+                  labelAvatar = (
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-neutral-800 border border-neutral-700 select-none">
+                      {t.charAltAvatar}
+                    </div>
+                  );
+                } else {
+                  labelName = c?.name ?? '未知角色';
+                  labelAvatar = c?.avatar ? <img src={c.avatar} className="w-10 h-10 rounded-full object-cover" alt="" /> : <div className="w-10 h-10 rounded-full icon-bg flex items-center justify-center"><MessageCircle size={18} className="icon-color" /></div>;
+                }
+
                 return (
                   <Row
                     key={t.id}
@@ -890,18 +941,85 @@ export function ChatScreen({
         {characters.length === 0 ? (
           <div className="text-center txt-faint py-6">还没有角色。去「我的」创建吧。</div>
         ) : (
-          <div className="space-y-2 max-h-[50vh] overflow-y-auto no-scrollbar">
-            {characters.map((c) => (
-              <button key={c.id} onClick={() => startChat(c.id)} className="tap w-full flex items-center gap-3 p-2.5 rounded-xl glass">
-                {c.avatar ? <img src={c.avatar} className="w-10 h-10 rounded-full object-cover" alt="" /> : <div className="w-10 h-10 rounded-full icon-bg flex items-center justify-center"><MessageCircle size={18} className="icon-color" /></div>}
-                <div className="flex-1 text-left min-w-0">
-                  <div className="text-[15px]">{c.name}</div>
-                  <div className="text-[12px] txt-faint truncate">{c.signature}</div>
-                </div>
+          <>
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={() => { setPickingChar(false); setPickingForGroup(true); }}
+                className="tap flex-1 h-10 rounded-xl glass text-[13px] font-medium flex items-center justify-center gap-1.5 txt-accent"
+              >
+                <Plus size={16} /> 创建群聊
               </button>
-            ))}
-          </div>
+            </div>
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto no-scrollbar">
+              {characters.map((c) => (
+                <button key={c.id} onClick={() => startChat(c.id)} className="tap w-full flex items-center gap-3 p-2.5 rounded-xl glass">
+                  {c.avatar ? <img src={c.avatar} className="w-10 h-10 rounded-full object-cover" alt="" /> : <div className="w-10 h-10 rounded-full icon-bg flex items-center justify-center"><MessageCircle size={18} className="icon-color" /></div>}
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="text-[15px]">{c.name}</div>
+                    <div className="text-[12px] txt-faint truncate">{c.signature}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
         )}
+      </Modal>
+
+      {/* 创建群聊模态框 */}
+      <Modal open={pickingForGroup} onClose={() => { setPickingForGroup(false); setSelectedGroupChars([]); setGroupName(''); }} title="创建群聊">
+        <div className="space-y-4">
+          <div>
+            <label className="text-[12px] txt-faint block mb-2">选择群成员（多选，至少2个）</label>
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto no-scrollbar">
+              {characters.map((c) => {
+                const isSelected = selectedGroupChars.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedGroupChars(selectedGroupChars.filter(id => id !== c.id));
+                      } else {
+                        setSelectedGroupChars([...selectedGroupChars, c.id]);
+                      }
+                    }}
+                    className={`tap w-full flex items-center gap-3 p-2.5 rounded-xl border ${isSelected ? 'border-[var(--accent)] bg-[var(--icon-bg-active)]' : 'border-[var(--border)] glass'}`}
+                  >
+                    {c.avatar ? <img src={c.avatar} className="w-10 h-10 rounded-full object-cover" alt="" /> : <div className="w-10 h-10 rounded-full icon-bg flex items-center justify-center"><MessageCircle size={18} className="icon-color" /></div>}
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="text-[15px]">{c.name}</div>
+                      <div className="text-[12px] txt-faint truncate">{c.signature}</div>
+                    </div>
+                    {isSelected && <div className="w-5 h-5 rounded-full bg-[var(--accent)] flex items-center justify-center text-white text-[11px]">✓</div>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[12px] txt-faint block mb-1">群聊名称（可选）</label>
+            <input
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              placeholder="不填写则自动生成"
+              className="w-full glass rounded-xl px-3 h-11 text-[14px] outline-none bg-transparent"
+            />
+          </div>
+
+          <div className="text-[12px] txt-faint">
+            已选择 {selectedGroupChars.length} 个角色
+          </div>
+
+          <button
+            onClick={createGroupChat}
+            disabled={selectedGroupChars.length < 2}
+            className="tap w-full h-11 rounded-full font-medium text-[14px] text-white disabled:opacity-40"
+            style={{ background: 'var(--accent)', color: 'var(--bg)' }}
+          >
+            创建群聊
+          </button>
+        </div>
       </Modal>
 
       <Confirm open={!!confirmDel} title="删除对话" message="确定删除这段对话？所有消息将清除。" danger onConfirm={() => { if (confirmDel) onChange(threads.filter((t) => t.id !== confirmDel.id)); setConfirmDel(null); }} onCancel={() => setConfirmDel(null)} />
@@ -921,7 +1039,7 @@ export function ChatScreen({
 
 function ChatConversation({
   api, char, thread, currentUser, worldEntries, characters, storyEvents, autoNpc,
-  activeInteractMode, activeInteractEnabled, onUpdateSettings,
+  activeInteractMode, activeInteractEnabled, onUpdateSettings, onUpdateThread,
   onSend, onBack, onDelete, onNpcDetected, onPlotEvents, onConsumeEvents,
   settings,
 }: {
@@ -936,6 +1054,7 @@ function ChatConversation({
   activeInteractMode?: 'manual' | 'auto';
   activeInteractEnabled?: boolean;
   onUpdateSettings?: (patch: any) => void;
+  onUpdateThread: (updater: (t: ChatThread) => ChatThread) => void;
   onSend: (msgs: ChatMessage[]) => void;
   onBack: () => void;
   onDelete: () => void;
@@ -988,13 +1107,40 @@ function ChatConversation({
 
   const buildSystem = (): string => {
     let sys = char.persona || `你是${char.name}。保持角色设定，自然地回应。`;
+
+    // 群聊模式
+    if (thread.isGroup && thread.groupMembers) {
+      const memberNames = thread.groupMembers
+        .map(id => characters.find(c => c.id === id)?.name)
+        .filter(Boolean)
+        .join('、');
+      sys += `\n\n[群聊设定]
+这是一个群聊「${thread.groupName}」，成员包括：${memberNames}。
+你需要根据对话内容判断是哪个角色在说话，并以相应角色的身份回复。
+如果用户@了某个角色，请以该角色的身份回复。
+群聊中的记忆与单独对话互通，你记得与用户的所有互动。`;
+    }
+
+    // 线上/线下模式
+    const mode = thread.interactionMode || 'online';
+    if (mode === 'offline') {
+      sys += `\n\n[线下模式]
+当前是线下模式，模拟现实见面场景。你可以使用动作描写，用 *动作* 或（动作）的格式。
+例如："你好呀！*微笑着挥手*" 或 "嗯...(低头思考)"
+你们正面对面交流，可以有肢体语言、表情、动作等现实互动。`;
+    } else {
+      sys += `\n\n[线上模式]
+当前是线上模式，模拟微信/QQ等聊天软件。禁止使用动作描写，只能发送文字、表情、图片、语音等线上内容。
+回复要符合线上聊天习惯，简洁自然。`;
+    }
+
     if (thread.charAltName) {
       sys += `\n\n[特殊设定]
 你现在正在使用你为试探用户特意开启的匿名/试探小号「${thread.charAltName}」来和用户「${currentUser?.nickname || '我'}」聊天！
 你的真实身份是「${char.name}」，而用户不知道你这个账号是「${char.name}」开启的。
 请深度扮演这个小号设定的个性和特征与用户对话，千万不能穿帮暴露出你真实的${char.name}身份！
 但是在你的内心活动（innerThought）中，你必须体现出你作为「${char.name}」在背后使用这个小号观察、试探、调戏用户的真正心理、好笑和得意的态度！`;
-    } else {
+    } else if (!thread.isGroup) {
       sys += `\n\n[对话人物设定]
 你正在和「${currentUser?.nickname || '我'}」聊天。对方的签名是：「${currentUser?.signature || ''}」${currentUser?.isAlt ? '，此账号是用户的匿名/试探小号。' : '，此账号是用户的主账号。'}`;
     }
@@ -1164,10 +1310,32 @@ function ChatConversation({
   const cancelLongPress = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
 
   const unconsumedEvents = storyEvents.filter((e) => !e.consumed);
-  const displayTitle = thread.charAltName ? `${thread.charAltName} (试探小号)` : char.name;
+  const displayTitle = thread.charAltName ? `${thread.charAltName} (试探小号)` : (thread.isGroup ? thread.groupName : char.name);
+  const currentMode = thread.interactionMode || 'online';
+
+  const toggleInteractionMode = () => {
+    const newMode = currentMode === 'online' ? 'offline' : 'online';
+    onUpdateThread((t) => ({ ...t, interactionMode: newMode }));
+  };
 
   return (
-    <AppScreen title={displayTitle} onBack={onBack} noPad right={<button onClick={onDelete} className="tap txt-dim"><Trash2 size={18} /></button>}>
+    <AppScreen
+      title={displayTitle}
+      onBack={onBack}
+      noPad
+      right={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleInteractionMode}
+            className="tap txt-dim hover:txt-accent transition-colors"
+            title={currentMode === 'online' ? '切换到线下模式' : '切换到线上模式'}
+          >
+            {currentMode === 'online' ? <Wifi size={18} /> : <WifiOff size={18} />}
+          </button>
+          <button onClick={onDelete} className="tap txt-dim"><Trash2 size={18} /></button>
+        </div>
+      }
+    >
       {unconsumedEvents.length > 0 && (
         <div className="px-4 py-2 text-[11px] txt-accent glass border-b border-[var(--border)] flex items-center gap-1.5 shrink-0">
           <Sparkles size={12} /> {unconsumedEvents.length} 条新剧情线索已感知

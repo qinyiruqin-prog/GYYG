@@ -41,9 +41,9 @@ export const APPS: AppMeta[] = [
 
   // v3.0 新增应用
   { id: 'anniversary',    name: '纪念日',     icon: 'Gift',           available: true, emoji: '🎁' },
-  { id: 'group_chat',     name: '群聊',       icon: 'Users',          available: true, emoji: '👥' },
+  { id: 'group_chat',     name: '群聊',       icon: 'Users',          available: false, emoji: '👥' },
   { id: 'phone_check',    name: '查手机',     icon: 'Search',         available: true, emoji: '🔍' },
-  { id: 'offline_mode',   name: '线下模式',   icon: 'MapPin',         available: true, emoji: '📍' },
+  { id: 'offline_mode',   name: '线下模式',   icon: 'MapPin',         available: false, emoji: '📍' },
   { id: 'couple_space',   name: '情侣空间',   icon: 'Heart',          available: true, emoji: '💑' },
   { id: 'home_system',    name: '家园',       icon: 'Home',           available: true, emoji: '🏠' },
   { id: 'kitchen',        name: '厨房',       icon: 'ChefHat',        available: true, emoji: '👨‍🍳' },
