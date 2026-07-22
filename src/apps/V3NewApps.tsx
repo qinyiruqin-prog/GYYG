@@ -9,26 +9,9 @@ export { TurtleSoupScreen } from './TurtleSoupScreen';
 export { GamesScreen } from './GamesScreen';
 export { DiscoverScreen } from './DiscoverScreen';
 export { AltAccountsScreen } from './AltAccountsScreen';
+export { WeiboScreen } from './WeiboScreen';
 
 // 所有核心v3.0功能已从单独文件导出
-
-export function WeiboScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="微博"
-      icon="📱"
-      description="类微博的社交平台，发布动态与角色互动"
-      features={[
-        '发布微博，支持图片',
-        '热门话题和标签',
-        '转发、评论、点赞',
-        '角色会发微博',
-        '实时热搜榜',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
 
 export function TwitterScreen({ onBack }: { onBack: () => void }) {
   return (

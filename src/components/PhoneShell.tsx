@@ -666,7 +666,17 @@ export function PhoneShell({
     if (open === 'home_system') return <HomeSystemScreen onBack={goHome} />;
     if (open === 'turtle_soup') return <TurtleSoupScreen onBack={goHome} />;
     if (open === 'games') return <GamesScreen onBack={goHome} />;
-    if (open === 'weibo') return <WeiboScreen onBack={goHome} />;
+    if (open === 'weibo')
+      return (
+        <WeiboScreen
+          api={settings.api}
+          me={settings.users.find((u) => u.id === settings.activeUserId) ?? settings.users[0]}
+          characters={settings.characters}
+          posts={settings.socialPosts || []}
+          onChange={(socialPosts) => updateSettings({ socialPosts })}
+          onBack={goHome}
+        />
+      );
     if (open === 'twitter') return <TwitterScreen onBack={goHome} />;
     if (open === 'memory') return <MemoryScreen onBack={goHome} />;
     if (open === 'weight') return <WeightManageScreen onBack={goHome} />;
