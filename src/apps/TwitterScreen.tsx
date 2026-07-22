@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Heart, MessageCircle, Repeat2, Send, Sparkles } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Send, Sparkles, RefreshCw } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { Modal } from '../components/Sheet';
 import { uid } from '../utils';
 import { askAI } from '../api';
+import { generateNPCPostBatch } from '../services/npcPostService';
 import type { ApiConfig, SocialPost, UserIdentity, Character } from '../types';
 
 export function TwitterScreen({
@@ -27,8 +28,20 @@ export function TwitterScreen({
   const [commenting, setCommenting] = useState<SocialPost | null>(null);
   const [commentText, setCommentText] = useState('');
   const [detail, setDetail] = useState<SocialPost | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const twitterPosts = posts.filter((p) => p.platform === 'twitter').sort((a, b) => b.ts - a.ts);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const npcPosts = generateNPCPostBatch(characters, posts, 'twitter');
+      onChange([...posts, ...npcPosts]);
+      await new Promise(resolve => setTimeout(resolve, 800));
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const post = () => {
     if (!content.trim()) return;
@@ -156,6 +169,12 @@ export function TwitterScreen({
       }
     >
       <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div className="px-4 pt-3 pb-2 flex justify-center sticky top-0 z-10 bg-[var(--bg)]/95 backdrop-blur border-b border-[var(--border)]">
+          <button onClick={handleRefresh} disabled={refreshing} className="tap flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-[13px] disabled:opacity-50">
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? '加载中…' : '刷新'}
+          </button>
+        </div>
         {twitterPosts.length === 0 ? (
           <div className="text-center txt-faint mt-16">还没有推文，发第一条吧</div>
         ) : (

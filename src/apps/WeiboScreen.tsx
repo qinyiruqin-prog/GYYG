@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Heart, MessageCircle, Repeat2, Send, Sparkles, TrendingUp, Image as ImageIcon, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Heart, MessageCircle, Repeat2, Send, Sparkles, TrendingUp, Image as ImageIcon, X, RefreshCw } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { Modal } from '../components/Sheet';
 import { uid } from '../utils';
 import { askAI } from '../api';
+import { generateNPCPostBatch } from '../services/npcPostService';
 import type { ApiConfig, SocialPost, UserIdentity, Character } from '../types';
 
 // 热搜话题
@@ -45,8 +46,22 @@ export function WeiboScreen({
   const [commenting, setCommenting] = useState<SocialPost | null>(null);
   const [commentText, setCommentText] = useState('');
   const [detail, setDetail] = useState<SocialPost | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const weiboPosts = posts.filter((p) => p.platform === 'weibo').sort((a, b) => b.ts - a.ts);
+
+  // 手动刷新获取NPC新帖子
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const npcPosts = generateNPCPostBatch(characters, posts, 'weibo');
+      onChange([...posts, ...npcPosts]);
+      // 延迟一下以显示刷新动画
+      await new Promise(resolve => setTimeout(resolve, 800));
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const post = () => {
     if (!content.trim()) return;
@@ -200,6 +215,12 @@ export function WeiboScreen({
       {/* timeline */}
       {tab === 'timeline' && (
         <div className="flex-1 overflow-y-auto no-scrollbar">
+          <div className="px-4 pt-3 pb-2 flex justify-center sticky top-0 z-10 bg-[var(--bg)]/95 backdrop-blur">
+            <button onClick={handleRefresh} disabled={refreshing} className="tap flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-[13px] disabled:opacity-50">
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? '加载中…' : '刷新'}
+            </button>
+          </div>
           {weiboPosts.length === 0 ? (
             <div className="text-center txt-faint mt-16">还没有微博，发第一条吧</div>
           ) : (
