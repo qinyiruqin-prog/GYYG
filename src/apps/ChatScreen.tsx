@@ -1632,38 +1632,113 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
 
         {/* 通话界面 */}
         {inCall && (
-          <div className="absolute inset-0 z-40 bg-neutral-950/95 flex flex-col items-center justify-center">
-            <div className="text-center space-y-4">
-              {inCall === 'video' ? (
-                <>
-                  <div className="text-[18px] font-medium txt-accent">视频通话中...</div>
-                  <div className="text-[13px] txt-faint">
-                    {cameraEnabled ? '摄像头已开启，角色可以看到你' : '摄像头未开启'}
+          <div className="absolute inset-0 z-40 bg-gradient-to-b from-neutral-900 to-neutral-950 flex flex-col">
+            {/* 通话头部 */}
+            <div className="pt-12 pb-6 text-center">
+              {/* 角色头像 */}
+              <div className="mb-4 flex justify-center">
+                {char.avatar ? (
+                  <img src={char.avatar} className="w-24 h-24 rounded-full object-cover ring-4 ring-[var(--accent)]/30" alt="" />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-3xl font-bold ring-4 ring-[var(--accent)]/30">
+                    {char.name[0]}
                   </div>
-                  <button
-                    onClick={() => {
-                      const newState = !cameraEnabled;
-                      setCameraEnabled(newState);
-                      if (newState) {
-                        sendActive(`用户开启了摄像头，你现在可以看到用户的样子了。请根据你看到的场景（用户的表情、环境、穿着等）做出自然的回应。可以使用动作描写。`);
-                      }
-                    }}
-                    className="px-4 py-2 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all"
-                  >
-                    {cameraEnabled ? '📷 关闭摄像头' : '📷 开启摄像头'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="text-[18px] font-medium txt-accent">语音通话中...</div>
-                  <div className="text-[13px] txt-faint">纯语音模式，禁止动作描写</div>
-                </>
+                )}
+              </div>
+
+              <div className="text-[20px] font-medium text-white mb-1">{char.name}</div>
+              <div className="text-[14px] txt-faint">
+                {inCall === 'video' ? '视频通话中' : '语音通话中'}
+              </div>
+
+              {/* 通话时长 */}
+              <div className="text-[13px] txt-faint mt-2">00:00</div>
+            </div>
+
+            {/* 视频通话特有：摄像头状态 */}
+            {inCall === 'video' && (
+              <div className="px-4 mb-4">
+                <div className={`py-2 px-4 rounded-xl text-center text-[13px] transition-all ${cameraEnabled ? 'bg-green-500/20 text-green-400' : 'bg-neutral-800 txt-faint'}`}>
+                  {cameraEnabled ? '📷 摄像头已开启，对方可以看到你' : '📷 摄像头未开启'}
+                </div>
+              </div>
+            )}
+
+            {/* 通话消息区域 */}
+            <div className="flex-1 overflow-y-auto px-4 space-y-3 mb-4">
+              {thread.messages
+                .filter(m => m.ts > (Date.now() - 600000)) // 只显示最近10分钟的消息
+                .map((m) => (
+                  <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-[14px] ${
+                        m.role === 'user'
+                          ? 'bg-[var(--accent)] text-white rounded-br-md'
+                          : 'bg-neutral-800 text-white rounded-bl-md'
+                      }`}
+                    >
+                      {m.content}
+                    </div>
+                  </div>
+                ))}
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="bg-neutral-800 rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-1">
+                    {[0,1,2].map((i) => <span key={i} className="w-1.5 h-1.5 rounded-full bg-white/50 animate-pulse-soft" style={{ animationDelay: `${i*0.2}s` }} />)}
+                  </div>
+                </div>
               )}
+            </div>
+
+            {/* 输入区域 */}
+            <div className="px-4 pb-4">
+              <div className="flex items-center gap-2 bg-neutral-800/50 backdrop-blur rounded-full px-4 py-2">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && send()}
+                  placeholder="输入消息..."
+                  className="flex-1 bg-transparent text-[14px] outline-none text-white placeholder:text-neutral-500"
+                />
+                <button
+                  onClick={send}
+                  disabled={loading || !input.trim()}
+                  className="w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-40 transition-opacity"
+                  style={{ background: 'var(--accent)' }}
+                >
+                  <Send size={16} className="text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* 通话控制按钮 */}
+            <div className="pb-8 px-8 flex items-center justify-center gap-6">
+              {inCall === 'video' && (
+                <button
+                  onClick={() => {
+                    const newState = !cameraEnabled;
+                    setCameraEnabled(newState);
+                    if (newState) {
+                      sendActive(`用户开启了摄像头，你现在可以看到用户的样子了。请根据你看到的场景（用户的表情、环境、穿着等）做出自然的回应。可以使用动作描写。`);
+                    }
+                  }}
+                  className="w-14 h-14 rounded-full bg-neutral-700 hover:bg-neutral-600 flex items-center justify-center transition-colors"
+                >
+                  <span className="text-2xl">{cameraEnabled ? '📷' : '📷'}</span>
+                </button>
+              )}
+
               <button
                 onClick={endCall}
-                className="mt-6 px-6 py-3 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
+                className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors shadow-lg"
               >
-                📞 结束通话
+                <span className="text-3xl">📞</span>
+              </button>
+
+              <button
+                className="w-14 h-14 rounded-full bg-neutral-700 hover:bg-neutral-600 flex items-center justify-center transition-colors"
+              >
+                <span className="text-2xl">🔇</span>
               </button>
             </div>
           </div>
