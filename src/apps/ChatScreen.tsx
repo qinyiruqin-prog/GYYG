@@ -1066,6 +1066,7 @@ function ChatConversation({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [thinkingMsg, setThinkingMsg] = useState<string | null>(null);
+  const [showChatSettings, setShowChatSettings] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1313,11 +1314,6 @@ function ChatConversation({
   const displayTitle = thread.charAltName ? `${thread.charAltName} (试探小号)` : (thread.isGroup ? thread.groupName : char.name);
   const currentMode = thread.interactionMode || 'online';
 
-  const toggleInteractionMode = () => {
-    const newMode = currentMode === 'online' ? 'offline' : 'online';
-    onUpdateThread((t) => ({ ...t, interactionMode: newMode }));
-  };
-
   return (
     <AppScreen
       title={displayTitle}
@@ -1326,11 +1322,11 @@ function ChatConversation({
       right={
         <div className="flex items-center gap-2">
           <button
-            onClick={toggleInteractionMode}
+            onClick={() => setShowChatSettings(true)}
             className="tap txt-dim hover:txt-accent transition-colors"
-            title={currentMode === 'online' ? '切换到线下模式' : '切换到线上模式'}
+            title="对话设置"
           >
-            {currentMode === 'online' ? <Wifi size={18} /> : <WifiOff size={18} />}
+            <Settings size={18} />
           </button>
           <button onClick={onDelete} className="tap txt-dim"><Trash2 size={18} /></button>
         </div>
@@ -1483,6 +1479,57 @@ function ChatConversation({
           </div>
         </div>
       )}
+
+      {/* 对话设置模态框 */}
+      <Modal open={showChatSettings} onClose={() => setShowChatSettings(false)} title="对话设置">
+        <div className="space-y-4">
+          <div>
+            <label className="text-[13px] txt-dim block mb-2 font-medium">交互模式</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  onUpdateThread((t) => ({ ...t, interactionMode: 'online' }));
+                }}
+                className={`flex-1 py-2.5 rounded-xl text-[13px] font-medium transition-all ${currentMode === 'online' ? 'bg-[var(--accent)] text-white' : 'glass txt-dim'}`}
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <Wifi size={16} />
+                  <span>线上模式</span>
+                </div>
+                <div className="text-[10px] opacity-80 mt-1">禁止动作描写</div>
+              </button>
+              <button
+                onClick={() => {
+                  onUpdateThread((t) => ({ ...t, interactionMode: 'offline' }));
+                }}
+                className={`flex-1 py-2.5 rounded-xl text-[13px] font-medium transition-all ${currentMode === 'offline' ? 'bg-[var(--accent)] text-white' : 'glass txt-dim'}`}
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <WifiOff size={16} />
+                  <span>线下模式</span>
+                </div>
+                <div className="text-[10px] opacity-80 mt-1">允许动作描写</div>
+              </button>
+            </div>
+          </div>
+
+          <div className="text-[12px] txt-faint leading-relaxed p-3 rounded-xl bg-neutral-900/50 border border-neutral-800">
+            {currentMode === 'online' ? (
+              <>
+                <strong className="txt-accent">线上模式：</strong>模拟微信/QQ等聊天软件，禁止使用动作描写，只能发送文字、表情、图片、语音等线上内容。
+              </>
+            ) : (
+              <>
+                <strong className="txt-accent">线下模式：</strong>模拟现实见面场景，可以使用动作描写如 *微笑* 或 (挥手)，支持肢体语言、表情等现实互动。
+              </>
+            )}
+          </div>
+
+          <div className="text-[11px] txt-faint">
+            💡 提示：线上/线下模式的记忆是互通的，切换模式不会丢失聊天记录。
+          </div>
+        </div>
+      </Modal>
     </AppScreen>
   );
 }
