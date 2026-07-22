@@ -1068,6 +1068,11 @@ function ChatConversation({
   const [thinkingMsg, setThinkingMsg] = useState<string | null>(null);
   const [showChatSettings, setShowChatSettings] = useState(false);
   const [showInteractMenu, setShowInteractMenu] = useState(false);
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const [showVoiceInput, setShowVoiceInput] = useState(false);
+  const [voiceText, setVoiceText] = useState('');
+  const [inCall, setInCall] = useState<'video' | 'voice' | null>(null);
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const endRef = useRef<HTMLDivElement>(null);
@@ -1075,6 +1080,7 @@ function ChatConversation({
   const inputLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapTime = useRef<number>(0);
   const lastAvatarTapTime = useRef<{[key: string]: number}>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [showTranslation, setShowTranslation] = useState<Record<string, boolean>>({});
@@ -1365,6 +1371,74 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
   };
   const cancelLongPress = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
 
+  // 发送图片
+  const handleSendImage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const imageUrl = ev.target?.result as string;
+      const userMsg: ChatMessage = {
+        id: uid(),
+        role: 'user',
+        content: '[图片]',
+        ts: Date.now(),
+        media: [{ kind: 'image', url: imageUrl }],
+      };
+      onSend([...thread.messages, userMsg]);
+    };
+    reader.readAsDataURL(file);
+    setShowPlusMenu(false);
+  };
+
+  // 发送语音
+  const sendVoiceMessage = () => {
+    if (!voiceText.trim()) return;
+    const userMsg: ChatMessage = {
+      id: uid(),
+      role: 'user',
+      content: '[语音]',
+      ts: Date.now(),
+      media: [{ kind: 'voice', url: '', duration: voiceText.length * 0.5, text: voiceText }],
+    };
+    onSend([...thread.messages, userMsg]);
+    setVoiceText('');
+    setShowVoiceInput(false);
+    setShowPlusMenu(false);
+  };
+
+  // 开始通话
+  const startCall = async (type: 'video' | 'voice') => {
+    setInCall(type);
+    setShowPlusMenu(false);
+
+    const callMsg: ChatMessage = {
+      id: uid(),
+      role: 'user',
+      content: type === 'video' ? '发起了视频通话' : '发起了语音通话',
+      ts: Date.now(),
+    };
+    onSend([...thread.messages, callMsg]);
+  };
+
+  // 结束通话
+  const endCall = () => {
+    const endMsg: ChatMessage = {
+      id: uid(),
+      role: 'user',
+      content: `结束了${inCall === 'video' ? '视频' : '语音'}通话`,
+      ts: Date.now(),
+    };
+    onSend([...thread.messages, endMsg]);
+    setInCall(null);
+    setCameraEnabled(false);
+  };
+
   const unconsumedEvents = storyEvents.filter((e) => !e.consumed);
   const displayTitle = thread.charAltName ? `${thread.charAltName} (试探小号)` : (thread.isGroup ? thread.groupName : char.name);
   const currentMode = thread.interactionMode || 'online';
@@ -1556,7 +1630,64 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
           </div>
         )}
 
+        {/* 通话界面 */}
+        {inCall && (
+          <div className="absolute inset-0 z-40 bg-neutral-950/95 flex flex-col items-center justify-center">
+            <div className="text-center space-y-4">
+              {inCall === 'video' ? (
+                <>
+                  <div className="text-[18px] font-medium txt-accent">视频通话中...</div>
+                  <div className="text-[13px] txt-faint">
+                    {cameraEnabled ? '摄像头已开启，角色可以看到你' : '摄像头未开启'}
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newState = !cameraEnabled;
+                      setCameraEnabled(newState);
+                      if (newState) {
+                        sendActive(`用户开启了摄像头，你现在可以看到用户的样子了。请根据你看到的场景（用户的表情、环境、穿着等）做出自然的回应。可以使用动作描写。`);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all"
+                  >
+                    {cameraEnabled ? '📷 关闭摄像头' : '📷 开启摄像头'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="text-[18px] font-medium txt-accent">语音通话中...</div>
+                  <div className="text-[13px] txt-faint">纯语音模式，禁止动作描写</div>
+                </>
+              )}
+              <button
+                onClick={endCall}
+                className="mt-6 px-6 py-3 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
+              >
+                📞 结束通话
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="px-3 py-2 border-t border-[var(--border)] flex items-center gap-2 shrink-0 bg-neutral-950/20">
+          {/* 隐藏的文件输入 */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          {/* + 按钮 */}
+          <button
+            onClick={() => setShowPlusMenu(true)}
+            className="tap w-10 h-10 rounded-full flex items-center justify-center txt-accent hover:bg-[var(--accent)]/10 transition-colors shrink-0"
+            disabled={multiSelectMode}
+          >
+            <Plus size={22} />
+          </button>
+
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -1779,6 +1910,67 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
             className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
           >
             📊 角色状态
+          </button>
+        </div>
+      </Modal>
+
+      {/* + 菜单模态框 */}
+      <Modal open={showPlusMenu} onClose={() => setShowPlusMenu(false)} title="更多功能">
+        <div className="space-y-2">
+          <button
+            onClick={() => {
+              setShowInteractMenu(true);
+              setShowPlusMenu(false);
+            }}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            ⚡ 主动互动
+          </button>
+          <button
+            onClick={handleSendImage}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            🖼️ 发送图片
+          </button>
+          <button
+            onClick={() => {
+              setShowVoiceInput(true);
+              setShowPlusMenu(false);
+            }}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            🎙️ 发送语音
+          </button>
+          <button
+            onClick={() => startCall('video')}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            📹 视频通话
+          </button>
+          <button
+            onClick={() => startCall('voice')}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            📞 语音通话
+          </button>
+        </div>
+      </Modal>
+
+      {/* 语音输入模态框 */}
+      <Modal open={showVoiceInput} onClose={() => { setShowVoiceInput(false); setVoiceText(''); }} title="发送语音消息">
+        <div className="space-y-4">
+          <textarea
+            value={voiceText}
+            onChange={(e) => setVoiceText(e.target.value)}
+            placeholder="输入要说的内容，发送后将显示为语音条..."
+            className="w-full h-32 glass rounded-xl px-3 py-2 text-[14px] outline-none bg-transparent resize-none"
+          />
+          <button
+            onClick={sendVoiceMessage}
+            disabled={!voiceText.trim()}
+            className="w-full py-3 rounded-xl bg-[var(--accent)] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+          >
+            发送语音
           </button>
         </div>
       </Modal>
