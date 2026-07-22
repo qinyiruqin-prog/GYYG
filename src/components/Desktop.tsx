@@ -220,20 +220,19 @@ function Page2({
   // 计算当天和近期的生理状态
   const today = new Date();
   const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  let isPeriodDay = false;
-  let isPMSDay = false; // 经期前3天
+  let isPeriodDay = true; // 默认今天是经期第一天（预览用）
+  let isPMSDay = false;
 
   if (periodRecords.length > 0) {
+    isPeriodDay = false;
     const sorted = [...periodRecords].sort((a, b) => b.startDate.localeCompare(a.startDate));
     const latest = sorted[0];
     const lastStart = new Date(latest.startDate);
     const lastStartTime = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate()).getTime();
 
-    // 计算当前周期天数
     const diffDays = Math.floor((todayTime - lastStartTime) / 86400000) + 1;
     let cycleDay = diffDays > 0 ? ((diffDays - 1) % cycleDays) + 1 : 1;
 
-    // 判断是否在经期中
     if (cycleDay <= durationDays) {
       if (latest.endDate) {
         const endTime = new Date(new Date(latest.endDate).getFullYear(), new Date(latest.endDate).getMonth(), new Date(latest.endDate).getDate()).getTime();
@@ -243,22 +242,8 @@ function Page2({
       }
     }
 
-    // 判断是否是经期前3天（PMS期）
     const daysUntilNext = cycleDays - cycleDay + 1;
     isPMSDay = daysUntilNext <= 3 && !isPeriodDay;
-
-    // 如果下一个周期的经期开始日在3天内
-    if (!isPeriodDay && !isPMSDay) {
-      let nextStart = new Date(lastStartTime);
-      for (let c = 0; c < 3; c++) {
-        nextStart = new Date(nextStart.getTime() + cycleDays * 86400000);
-        const pmsDiff = Math.floor((nextStart.getTime() - todayTime) / 86400000);
-        if (pmsDiff >= 0 && pmsDiff <= 3) {
-          isPMSDay = true;
-          break;
-        }
-      }
-    }
   }
 
   const d = new Date();
