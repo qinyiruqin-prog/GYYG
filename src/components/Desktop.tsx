@@ -220,8 +220,10 @@ function Page2({
   // 计算当天和近期的生理状态
   const today = new Date();
   const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  let isPeriodDay = true; // 默认今天是经期第一天（预览用）
-  let isPMSDay = false;
+  let isPeriodDay = true;
+  let isPMSDay3 = false;
+  let isPMSDay2 = false;
+  let isPMSDay1 = false;
 
   if (periodRecords.length > 0) {
     isPeriodDay = false;
@@ -231,7 +233,7 @@ function Page2({
     const lastStartTime = new Date(lastStart.getFullYear(), lastStart.getMonth(), lastStart.getDate()).getTime();
 
     const diffDays = Math.floor((todayTime - lastStartTime) / 86400000) + 1;
-    let cycleDay = diffDays > 0 ? ((diffDays - 1) % cycleDays) + 1 : 1;
+    const cycleDay = diffDays > 0 ? ((diffDays - 1) % cycleDays) + 1 : 1;
 
     if (cycleDay <= durationDays) {
       if (latest.endDate) {
@@ -243,7 +245,9 @@ function Page2({
     }
 
     const daysUntilNext = cycleDays - cycleDay + 1;
-    isPMSDay = daysUntilNext <= 3 && !isPeriodDay;
+    isPMSDay3 = daysUntilNext === 3 && !isPeriodDay;
+    isPMSDay2 = daysUntilNext === 2 && !isPeriodDay;
+    isPMSDay1 = daysUntilNext === 1 && !isPeriodDay;
   }
 
   const d = new Date();
@@ -267,10 +271,12 @@ function Page2({
       >
         <div className="flex items-center justify-between mb-3">
           <div className="font-title text-[17px] txt-accent">{year}年{month + 1}月</div>
-          <div className="text-[11px] txt-faint flex items-center gap-1.5">
-            {isPeriodDay ? <span className="text-pink-400 font-medium">🩸 经期</span>
-              : isPMSDay ? <span className="txt-accent">🌙 PMS</span>
-              : `${periodRecords.length}条记录`}
+          <div className="text-[11px] flex items-center gap-1.5">
+            {periodRecords.length > 0
+              ? (isPeriodDay ? <span className="text-pink-400 font-medium">🩸 经期</span>
+                : (isPMSDay1 || isPMSDay2 || isPMSDay3) ? <span className="text-orange-400 font-medium">🌙 PMS</span>
+                : <span className="txt-faint">{periodRecords.length}条记录</span>)
+              : <span className="text-pink-400 font-medium">🩸 经期（预览）</span>}
           </div>
         </div>
         <div className="grid grid-cols-7 gap-y-1.5 text-center">
@@ -285,24 +291,28 @@ function Page2({
                     'w-7 h-7 flex flex-col items-center justify-center text-[13px] rounded-full transition-all relative',
                     day === todayDate ? 'font-medium' : 'txt-dim',
                   )}
-                  style={day === todayDate ? { background: 'var(--accent)', color: 'var(--bg)' } : undefined}
+                  style={day === todayDate
+                    ? { background: 'var(--accent)', color: 'var(--bg)' }
+                    : undefined}
                 >
                   {day}
-                  {/* 经期当天：玫红色小圆点 */}
                   {isPeriodDay && day === todayDate && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-pink-500" />
+                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: '#f472b6' }} />
                   )}
-                  {/* PMS前3天：数字颜色跟随主题加深 */}
-                  {isPMSDay && day === todayDate && !isPeriodDay && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: 'var(--text-dim)' }} />
+                  {(isPMSDay1 || isPMSDay2 || isPMSDay3) && day === todayDate && !isPeriodDay && (
+                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: '#fb923c' }} />
                   )}
                 </div>
               )}
             </div>
           ))}
         </div>
-        <div className="text-[10px] txt-faint mt-2 text-center">
-          点击查看生理状态详情 →
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)] text-[11px]">
+          <div className="flex items-center gap-3 txt-faint">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{ background: '#f472b6' }} /> 经期</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{ background: '#fb923c' }} /> PMS</span>
+          </div>
+          <span className="txt-accent">查看生理详情 →</span>
         </div>
       </div>
       <Widget kind="quoteSteps" music={[]} album={[]} playing={false} onTogglePlay={() => {}} onShortcut={onShortcut} />
