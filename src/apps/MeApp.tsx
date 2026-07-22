@@ -295,6 +295,19 @@ export function MeApp({
           }
         />
         <Row
+          label={<Menu icon={<Settings size={17} />} text="自动翻译外语" />}
+          hint={settings.autoTranslateEnabled ? '开启' : '关闭'}
+          onClick={() => updateSettings({ autoTranslateEnabled: !settings.autoTranslateEnabled })}
+          right={
+            <span
+              className={`text-[12px] px-2 py-0.5 rounded-full ${settings.autoTranslateEnabled ? 'txt-accent' : 'txt-faint'}`}
+              style={{ background: settings.autoTranslateEnabled ? 'var(--icon-bg-active)' : 'var(--icon-bg)' }}
+            >
+              {settings.autoTranslateEnabled ? 'ON' : 'OFF'}
+            </span>
+          }
+        />
+        <Row
           label={<Menu icon={<Settings size={17} />} text="侧边滑动返回" />}
           hint={settings.swipeBackEnabled !== false ? '开启' : '关闭'}
           onClick={() => updateSettings({ swipeBackEnabled: settings.swipeBackEnabled === false ? true : false })}

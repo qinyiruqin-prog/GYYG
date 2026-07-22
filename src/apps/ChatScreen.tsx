@@ -1067,8 +1067,11 @@ function ChatConversation({
   const [loading, setLoading] = useState(false);
   const [thinkingMsg, setThinkingMsg] = useState<string | null>(null);
   const [showChatSettings, setShowChatSettings] = useState(false);
+  const [showInteractMenu, setShowInteractMenu] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTapTime = useRef<number>(0);
 
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [showTranslation, setShowTranslation] = useState<Record<string, boolean>>({});
@@ -1429,65 +1432,44 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
           )}
           <div ref={endRef} />
         </div>
-        <div className="px-3 py-1.5 border-t border-[var(--border)] flex items-center gap-2 overflow-x-auto no-scrollbar bg-neutral-900/30 shrink-0">
-          <button 
-            type="button"
-            onClick={() => {
-              if (onUpdateSettings) {
-                const enabled = activeInteractEnabled !== false;
-                if (!enabled) {
-                  onUpdateSettings({ activeInteractEnabled: true, activeInteractMode: 'manual' });
-                } else if (activeInteractMode === 'manual') {
-                  onUpdateSettings({ activeInteractMode: 'auto' });
-                } else {
-                  onUpdateSettings({ activeInteractEnabled: false });
+        <div className="px-3 py-2 border-t border-[var(--border)] flex items-center gap-2 shrink-0 bg-neutral-950/20">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && send()}
+            placeholder={`对 ${thread.charAltName || char.name} 说…`}
+            className="flex-1 glass rounded-full px-4 h-10 text-[14px] outline-none bg-transparent placeholder:text-[var(--text-faint)]"
+            onPointerDown={(e) => {
+              // 双击检测
+              const now = Date.now();
+              if (now - lastTapTime.current < 300) {
+                // 双击触发拍一拍
+                e.preventDefault();
+                if (activeInteractEnabled !== false) {
+                  sendActive('用户刚刚拍了拍你，请根据你的人设，以你独特的风格拍回去或说点什么。也可以选择发张生活照或者发段语音。', `我 👏 拍了拍 ${thread.charAltName || char.name}`);
                 }
+                lastTapTime.current = 0;
+              } else {
+                lastTapTime.current = now;
+                // 长按检测
+                inputLongPressTimer.current = setTimeout(() => {
+                  if (activeInteractEnabled !== false) {
+                    setShowInteractMenu(true);
+                  }
+                }, 500);
               }
             }}
-            className="px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 shrink-0 select-none transition-all duration-300"
-            style={{ 
-              background: activeInteractEnabled === false ? 'var(--icon-bg)' : 'var(--icon-bg-active)',
-              color: activeInteractEnabled === false ? 'var(--text-faint)' : 'var(--accent)'
+            onPointerUp={() => {
+              if (inputLongPressTimer.current) {
+                clearTimeout(inputLongPressTimer.current);
+              }
             }}
-          >
-            ⚡ 主动互动: {activeInteractEnabled === false ? '已关' : activeInteractMode === 'auto' ? '自动挡' : '手动挡'}
-          </button>
-
-          {activeInteractEnabled !== false && (
-            <>
-              <button 
-                type="button"
-                onClick={() => sendActive('用户刚刚拍了拍你，请根据你的人设，以你独特的风格拍回去或说点什么。也可以选择发张生活照或者发段语音。', `我 👏 拍了拍 ${thread.charAltName || char.name}`)} 
-                className="px-2.5 py-1 rounded-full text-[11px] glass txt-dim hover:txt-accent transition-colors shrink-0"
-              >
-                👏 拍一拍
-              </button>
-              <button 
-                type="button"
-                onClick={() => sendActive('用户希望你主动。请完全由你主动开启一个新话题，聊聊你的最新烦恼、趣事、秘密，或者你脑子里正想着什么。也可以主动发照片或语音。')} 
-                className="px-2.5 py-1 rounded-full text-[11px] glass txt-dim hover:txt-accent transition-colors shrink-0"
-              >
-                🔮 主动搭讪
-              </button>
-              <button 
-                type="button"
-                onClick={() => sendActive('用户想看你的自拍/照片。请配合，写一个详细的英文绘图提示词描述你自己的肖像，并且 sendImage 必须设为 true。')} 
-                className="px-2.5 py-1 rounded-full text-[11px] glass txt-dim hover:txt-accent transition-colors shrink-0"
-              >
-                📸 发自拍
-              </button>
-              <button 
-                type="button"
-                onClick={() => sendActive('用户想听你的声音。请配合，写下你要发的声音文本，并且 sendVoice 必须设为 true。')} 
-                className="px-2.5 py-1 rounded-full text-[11px] glass txt-dim hover:txt-accent transition-colors shrink-0"
-              >
-                🎙️ 发语音
-              </button>
-            </>
-          )}
-        </div>
-        <div className="px-3 py-2 border-t border-[var(--border)] flex items-center gap-2 shrink-0 bg-neutral-950/20">
-          <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} placeholder={`对 ${thread.charAltName || char.name} 说…`} className="flex-1 glass rounded-full px-4 h-10 text-[14px] outline-none bg-transparent placeholder:text-[var(--text-faint)]" />
+            onPointerLeave={() => {
+              if (inputLongPressTimer.current) {
+                clearTimeout(inputLongPressTimer.current);
+              }
+            }}
+          />
           <button onClick={send} disabled={loading || !input.trim()} className="tap w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-40 shrink-0" style={{ background: 'var(--accent)', color: 'var(--bg)' }}><Send size={18} /></button>
         </div>
       </div>
@@ -1629,6 +1611,63 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
           <div className="text-[11px] txt-faint">
             💡 提示：线上/线下模式的记忆是互通的，切换模式不会丢失聊天记录。
           </div>
+        </div>
+      </Modal>
+
+      {/* 互动菜单模态框 */}
+      <Modal open={showInteractMenu} onClose={() => setShowInteractMenu(false)} title="互动菜单">
+        <div className="space-y-2">
+          <button
+            onClick={() => {
+              sendActive('用户希望你主动。请完全由你主动开启一个新话题，聊聊你的最新烦恼、趣事、秘密，或者你脑子里正想着什么。也可以主动发照片或语音。');
+              setShowInteractMenu(false);
+            }}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            🔮 主动搭讪
+          </button>
+          <button
+            onClick={() => {
+              sendActive('用户想看你的自拍/照片。请配合，写一个详细的英文绘图提示词描述你自己的肖像，并且 sendImage 必须设为 true。');
+              setShowInteractMenu(false);
+            }}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            📸 发自拍
+          </button>
+          <button
+            onClick={() => {
+              sendActive('用户想听你的声音。请配合，写下你要发的声音文本，并且 sendVoice 必须设为 true。');
+              setShowInteractMenu(false);
+            }}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            🎙️ 发语音
+          </button>
+          <button
+            onClick={() => {
+              // 显示最新的心声
+              const lastAssistantMsg = [...thread.messages].reverse().find(m => m.role === 'assistant' && m.innerThought);
+              if (lastAssistantMsg?.innerThought) {
+                setThinkingMsg(lastAssistantMsg.innerThought);
+              } else {
+                setThinkingMsg('暂无心声记录');
+              }
+              setShowInteractMenu(false);
+            }}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            👁️ 查看心声
+          </button>
+          <button
+            onClick={() => {
+              setThinkingMsg(`角色状态：\n在线状态：活跃\n当前心情：${char.name}正在思考中...`);
+              setShowInteractMenu(false);
+            }}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            📊 角色状态
+          </button>
         </div>
       </Modal>
     </AppScreen>
