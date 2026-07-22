@@ -525,26 +525,25 @@ export function PeriodScreen({
   );
 }
 
-export function getPeriodPrompt(settings: any): string {
-  const records = settings.periodRecords || [];
-  if (records.length === 0) return '';
+  export function getPeriodPrompt(settings: any, today: Date = new Date()): string {
+    const records = settings.periodRecords || [];
+    if (records.length === 0) return '';
 
-  const cycleDays = settings.periodCycleDays || 28;
-  const durationDays = settings.periodDurationDays || 5;
+    const cycleDays = settings.periodCycleDays || 28;
+    const durationDays = settings.periodDurationDays || 5;
 
-  // Sort records descending to get the latest
-  const sorted = [...records].sort((a: any, b: any) => b.startDate.localeCompare(a.startDate));
-  const latest = sorted[0];
+    // Sort records descending to get the latest
+    const sorted = [...records].sort((a: any, b: any) => b.startDate.localeCompare(a.startDate));
+    const latest = sorted[0];
 
-  const today = new Date();
-  const lastStart = new Date(latest.startDate);
-  const diffMs = today.getTime() - lastStart.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+    const lastStart = new Date(latest.startDate);
+    const diffMs = today.getTime() - lastStart.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
 
-  let cycleDayNumber = 1;
-  if (diffDays >= 1) {
-    cycleDayNumber = ((diffDays - 1) % cycleDays) + 1;
-  }
+    let cycleDayNumber = 1;
+    if (diffDays >= 1) {
+      cycleDayNumber = ((diffDays - 1) % cycleDays) + 1;
+    }
 
   let phase = '卵泡期 (Follicular)';
   let isPeriod = false;

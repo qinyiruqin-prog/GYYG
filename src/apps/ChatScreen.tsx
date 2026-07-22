@@ -1184,7 +1184,7 @@ function ChatConversation({
 ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条表达反应，第二条补充细节，第三条延伸话题等。' : ''}
 请确保每条消息内容充实，符合字数要求，不要过于简短或冗长。`;
 
-    sys += getPeriodPrompt(settings);
+    sys += getPeriodPrompt(settings, new Date());
     return sys;
   };
 

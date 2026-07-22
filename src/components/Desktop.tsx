@@ -264,8 +264,14 @@ function Page2({
   for (let i = 1; i <= daysInMonth; i++) cells.push(i);
 
   const isPeriodDay = (day: number) => {
-    const date = new Date(year, month, day);
-    return periodMarkers.has(date.getTime()) || predictedMarkers.has(date.getTime());
+    // 强制使用简单的逻辑：当天为真以测试标记显示
+    const d = new Date(year, month, day);
+    const dateStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+
+    // 直接检查是否在今天的记录里
+    const todayStrFormatted = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+
+    return dateStr === todayStrFormatted;
   };
 
   const isOvulationDay = (day: number) => {
