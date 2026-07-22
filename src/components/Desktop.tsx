@@ -119,6 +119,7 @@ export function Desktop({
               )}
               {pIdx === 1 && (
                 <Page2
+                  settings={settings}
                   gridIds={gridIds}
                   onOpenApp={onOpenApp}
                   onShortcut={onShortcut}
@@ -205,15 +206,131 @@ function Page1({
 
 /* ---------- Page 2: calendar + quote/steps + icon grid ---------- */
 function Page2({
-  gridIds, onOpenApp, onShortcut,
+  settings, gridIds, onOpenApp, onShortcut,
 }: {
+  settings: AppSettings;
   gridIds: string[];
   onOpenApp: (id: string) => void;
   onShortcut: (a: ShortcutAction) => void;
 }) {
+  const periodRecords = settings.periodRecords || [];
+  const cycleDays = settings.periodCycleDays || 28;
+  const durationDays = settings.periodDurationDays || 5;
+
+  // 计算生理周期标记
+  const periodMarkers = new Set<number>();
+  const predictedMarkers = new Set<number>();
+  let ovulationDay = 0;
+
+  if (periodRecords.length > 0) {
+    const sorted = [...periodRecords].sort((a, b) => b.startDate.localeCompare(a.startDate));
+    const latest = sorted[0];
+    const lastStart = new Date(latest.startDate);
+
+    // 标记所有已记录的经期日
+    sorted.forEach(record => {
+      const start = new Date(record.startDate);
+      const end = record.endDate ? new Date(record.endDate) : new Date(start.getTime() + durationDays * 86400000);
+      let current = new Date(start);
+      while (current <= end) {
+        periodMarkers.add(current.getTime());
+        current = new Date(current.getTime() + 86400000);
+      }
+    });
+
+    // 预测未来的经期日
+    let nextStart = new Date(lastStart);
+    for (let cycle = 0; cycle < 6; cycle++) {
+      nextStart = new Date(nextStart.getTime() + cycleDays * 86400000);
+      for (let d = 0; d < durationDays; d++) {
+        const predDay = new Date(nextStart.getTime() + d * 86400000);
+        predictedMarkers.add(predDay.getTime());
+      }
+      // 排卵日大约在下次月经前14天
+      ovulationDay = new Date(nextStart.getTime() - 14 * 86400000).getTime();
+    }
+  }
+
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const today = d.getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const weeks = ['日', '一', '二', '三', '四', '五', '六'];
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let i = 1; i <= daysInMonth; i++) cells.push(i);
+
+  const isPeriodDay = (day: number) => {
+    const date = new Date(year, month, day);
+    return periodMarkers.has(date.getTime()) || predictedMarkers.has(date.getTime());
+  };
+
+  const isOvulationDay = (day: number) => {
+    const date = new Date(year, month, day);
+    return date.getTime() === ovulationDay;
+  };
+
   return (
     <div className="space-y-3">
-      <Widget kind="fullCalendar" music={[]} album={[]} playing={false} onTogglePlay={() => {}} onShortcut={onShortcut} />
+      {/* 自定义日历组件 — 联动经期 */}
+      <div
+        onClick={() => onOpenApp('period')}
+        className="glass rounded-[20px] p-4 border border-neutral-800/40 text-left cursor-pointer hover:border-neutral-700/60 transition-all"
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-title text-[17px] txt-accent">{year}年{month + 1}月</div>
+          <div className="text-[11px] txt-faint flex items-center gap-1.5">
+            {periodRecords.length > 0 ? `${periodRecords.length}条记录` : '0个日程'}
+            <span className="text-pink-400">🩸</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-7 gap-y-1.5 text-center">
+          {weeks.map((w, i) => (
+            <div key={i} className="text-[11px] txt-faint pb-1">{w}</div>
+          ))}
+          {cells.map((day, i) => (
+            <div key={i} className="flex items-center justify-center py-0.5 relative">
+              {day && (
+                <div
+                  className={cls(
+                    'w-7 h-7 flex items-center justify-center text-[13px] rounded-full transition-all relative',
+                    day === today ? 'font-medium' : 'txt-dim',
+                  )}
+                  style={day === today ? { background: 'var(--accent)', color: 'var(--bg)' } : undefined}
+                >
+                  {/* 经期日粉色圆圈标记 */}
+                  {isPeriodDay(day) && (
+                    <span
+                      className="absolute inset-0 rounded-full"
+                      style={{ border: '2px solid #f472b6', opacity: day === today ? 0.6 : 0.35 }}
+                    />
+                  )}
+                  {/* 排卵日特殊标记 */}
+                  {isOvulationDay(day) && (
+                    <span
+                      className="absolute -top-0.5 left-1/2 -translate-x-1/2 text-[8px]"
+                      style={{ color: '#818cf8' }}
+                    >
+                      🌸
+                    </span>
+                  )}
+                  {day}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {periodRecords.length > 0 && (
+          <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-[var(--border)] text-[10px] txt-faint">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-400 inline-block" /> 经期</span>
+            <span className="flex items-center gap-1">🌸 排卵日</span>
+            <span className="flex items-center gap-1">🩸 点击查看详情</span>
+          </div>
+        )}
+      </div>
       <Widget kind="quoteSteps" music={[]} album={[]} playing={false} onTogglePlay={() => {}} onShortcut={onShortcut} />
       <IconGrid ids={gridIds} onOpenApp={onOpenApp} />
     </div>
