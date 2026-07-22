@@ -10,26 +10,9 @@ export { GamesScreen } from './GamesScreen';
 export { DiscoverScreen } from './DiscoverScreen';
 export { AltAccountsScreen } from './AltAccountsScreen';
 export { WeiboScreen } from './WeiboScreen';
+export { TwitterScreen } from './TwitterScreen';
 
 // 所有核心v3.0功能已从单独文件导出
-
-export function TwitterScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <ComingSoonV3
-      title="X (原推特)"
-      icon="🐦"
-      description="推特风格的社交平台"
-      features={[
-        '发布推文（280字限制）',
-        '转推功能',
-        '话题标签 #',
-        '时间线展示',
-        '角色互动',
-      ]}
-      onBack={onBack}
-    />
-  );
-}
 
 export function MemoryScreen({ onBack }: { onBack: () => void }) {
   return (

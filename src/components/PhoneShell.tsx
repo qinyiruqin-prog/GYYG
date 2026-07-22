@@ -677,7 +677,17 @@ export function PhoneShell({
           onBack={goHome}
         />
       );
-    if (open === 'twitter') return <TwitterScreen onBack={goHome} />;
+    if (open === 'twitter')
+      return (
+        <TwitterScreen
+          api={settings.api}
+          me={settings.users.find((u) => u.id === settings.activeUserId) ?? settings.users[0]}
+          characters={settings.characters}
+          posts={settings.socialPosts || []}
+          onChange={(socialPosts) => updateSettings({ socialPosts })}
+          onBack={goHome}
+        />
+      );
     if (open === 'memory') return <MemoryScreen onBack={goHome} />;
     if (open === 'weight') return <WeightManageScreen onBack={goHome} />;
     if (open === 'discover') return <DiscoverScreen onBack={goHome} />;
