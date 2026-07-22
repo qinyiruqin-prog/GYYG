@@ -1157,13 +1157,15 @@ function ChatConversation({
     }
 
     // 回复设置
-    const replyCount = thread.replyCount || 1;
+    const minReplyCount = thread.minReplyCount || 1;
+    const maxReplyCount = thread.maxReplyCount || 1;
     const minWords = thread.minWordCount || 50;
     const maxWords = thread.maxWordCount || 120;
 
     sys += `\n\n[回复要求]
-你需要回复 ${replyCount} 条消息。每条消息的字数应该在 ${minWords} 到 ${maxWords} 字之间。
-${replyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条表达反应，第二条补充细节。' : ''}
+你需要回复 ${minReplyCount} 到 ${maxReplyCount} 条消息（根据对话内容自然决定具体条数）。
+每条消息的字数应该在 ${minWords} 到 ${maxWords} 字之间。
+${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条表达反应，第二条补充细节，第三条延伸话题等。' : ''}
 请确保每条消息内容充实，符合字数要求，不要过于简短或冗长。`;
 
     sys += getPeriodPrompt(settings);
@@ -1538,21 +1540,40 @@ ${replyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条表
 
           {/* 回复条数设置 */}
           <div>
-            <label className="text-[13px] txt-dim block mb-2 font-medium">角色每次回复条数</label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((num) => (
-                <button
-                  key={num}
-                  onClick={() => {
-                    onUpdateThread((t) => ({ ...t, replyCount: num }));
+            <label className="text-[13px] txt-dim block mb-2 font-medium">角色每次回复条数范围</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] txt-faint block mb-1">最少回复条数</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={thread.minReplyCount || 1}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 1;
+                    onUpdateThread((t) => ({ ...t, minReplyCount: Math.max(1, Math.min(10, val)) }));
                   }}
-                  className={`flex-1 py-2 rounded-xl text-[13px] font-medium transition-all ${(thread.replyCount || 1) === num ? 'bg-[var(--accent)] text-white' : 'glass txt-dim'}`}
-                >
-                  {num}条
-                </button>
-              ))}
+                  className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] txt-faint block mb-1">最多回复条数</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={thread.maxReplyCount || 1}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 1;
+                    onUpdateThread((t) => ({ ...t, maxReplyCount: Math.max(1, Math.min(20, val)) }));
+                  }}
+                  className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
+                />
+              </div>
             </div>
-            <div className="text-[11px] txt-faint mt-1.5">当前设置：每次回复 {thread.replyCount || 1} 条消息</div>
+            <div className="text-[11px] txt-faint mt-1.5">
+              当前设置：每次回复 {thread.minReplyCount || 1} - {thread.maxReplyCount || 1} 条消息
+            </div>
           </div>
 
           {/* 字数范围设置 */}
@@ -1578,11 +1599,11 @@ ${replyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条表
                 <input
                   type="number"
                   min="20"
-                  max="1000"
+                  max="2000"
                   value={thread.maxWordCount || 120}
                   onChange={(e) => {
                     const val = parseInt(e.target.value) || 120;
-                    onUpdateThread((t) => ({ ...t, maxWordCount: Math.max(20, Math.min(1000, val)) }));
+                    onUpdateThread((t) => ({ ...t, maxWordCount: Math.max(20, Math.min(2000, val)) }));
                   }}
                   className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
                 />

@@ -167,7 +167,8 @@ export interface ChatThread {
   isChecking?: boolean; // 是否正在被查手机
   interactionMode?: InteractionMode; // 当前会话的交互模式（默认online）
   sharedMemory: ChatMessage[]; // 线上线下共享的记忆（两种模式互通）
-  replyCount?: number; // 角色每次回复的条数（1-5条，默认1）
+  minReplyCount?: number; // 角色每次回复的最少条数（默认1）
+  maxReplyCount?: number; // 角色每次回复的最多条数（默认1）
   minWordCount?: number; // 每条消息最少字数（默认50）
   maxWordCount?: number; // 每条消息最多字数（默认120）
 }
