@@ -1104,6 +1104,8 @@ function ChatConversation({
   const lastTapTime = useRef<number>(0);
   const lastAvatarTapTime = useRef<{[key: string]: number}>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const replyDelayTimer = useRef<ReturnType<typeof setTimeout> | null>(null); // 延迟回复计时器
+  const pendingMessagesRef = useRef<ChatMessage[]>([]); // 保存待处理的用户消息
 
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [showTranslation, setShowTranslation] = useState<Record<string, boolean>>({});
@@ -1134,6 +1136,16 @@ function ChatConversation({
   };
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [thread.messages, loading]);
+
+  // 清理延迟回复计时器
+  useEffect(() => {
+    return () => {
+      if (replyDelayTimer.current) {
+        clearTimeout(replyDelayTimer.current);
+        replyDelayTimer.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const unconsumed = storyEvents.filter((e) => !e.consumed);
@@ -1214,107 +1226,124 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
     const userMsg: ChatMessage = { id: uid(), role: 'user', content: text, ts: Date.now() };
     const next = [...thread.messages, userMsg];
     onSend(next);
-    setLoading(true);
-    setThinkingMsg('对方正在输入…');
-    try {
-      const history: ChatMsg[] = [
-        { role: 'system', content: buildSystem() },
-        ...next.map((m) => ({ role: m.role, content: m.content } as ChatMsg)),
-      ];
-      const rich = await callChatRich(api.chat, history, { temperature: 0.85, maxTokens: 800 });
-      const assistantMsg: ChatMessage = {
-        id: uid(),
-        role: 'assistant',
-        content: rich.content,
-        innerThought: rich.innerThought,
-        ts: Date.now(),
-      };
-      onSend([...next, assistantMsg]);
 
-      // 自动翻译功能
-      if (settings.autoTranslateEnabled && assistantMsg.content) {
-        // 检测是否包含外语（简单检测：包含英文字母比例超过30%）
-        const englishChars = (assistantMsg.content.match(/[a-zA-Z]/g) || []).length;
-        const totalChars = assistantMsg.content.length;
-        if (totalChars > 0 && englishChars / totalChars > 0.3) {
-          // 自动翻译
-          try {
-            const prompt = "你是一个专业的高保真中英互译翻译官。请将用户的输入文本进行精准、自然的双语互译。如果是中文文本，请翻译成纯英文；如果是英文、拼音、外文或其他混合文本，请翻译成纯中文。请不要带任何多余的解释、回复或格式（如「好的，这是翻译：」），直接输出翻译后的目标纯文本。";
-            const result = await askAI(api, prompt, assistantMsg.content);
-            setTranslations((prev) => ({ ...prev, [assistantMsg.id]: result }));
-            setShowTranslation((prev) => ({ ...prev, [assistantMsg.id]: true }));
-          } catch (err) {
-            console.error('Auto-translation error:', err);
-          }
-        }
-      }
+    // 将用户消息添加到待处理队列
+    pendingMessagesRef.current = next;
 
-      // Media generation
-      const media: MessageMedia[] = [];
-      try {
-        if (rich.sendImage && rich.imagePrompt) {
-          const appearance = char.imagePromptTemplate ? `${char.imagePromptTemplate}, ` : '';
-          const imgUrl = await generateImage(api.image, appearance + rich.imagePrompt, { faceRef: char.faceRef });
-          media.push({ kind: 'image', url: imgUrl });
-        }
-      } catch { /* image optional */ }
-      try {
-        if (rich.sendVoice && rich.voiceText) {
-          const { url, duration } = await textToSpeech(api.voice, rich.voiceText);
-          media.push({ kind: 'voice', url, duration, text: rich.voiceText });
-        }
-      } catch { /* voice optional */ }
-      if (media.length) {
-        onSend([...next, assistantMsg, { id: uid(), role: 'assistant', content: '', ts: Date.now(), media }]);
-      }
-
-      // Background NPC & Plot Event detection
-      const recentText = next.slice(-8).map((m) => `${m.role === 'user' ? '用户' : (thread.charAltName || char.name)}：${m.content}`).join('\n');
-      const existingNames = characters.map((c) => c.name);
-
-      if (autoNpc) {
-        detectNpcs(api, char.name, recentText, existingNames).then((suggestions) => {
-          if (suggestions.length) {
-            const newChars: Character[] = suggestions.map((s) => ({
-              id: uid(),
-              name: s.name,
-              avatar: '',
-              persona: s.persona,
-              greeting: s.greeting,
-              signature: s.signature,
-              imagePromptTemplate: '',
-              createdAt: Date.now(),
-            }));
-            onNpcDetected(newChars);
-          }
-        }).catch(() => {});
-      }
-
-      const otherNames = existingNames.filter((n) => n !== char.name);
-      if (otherNames.length) {
-        detectPlotEvents(api, char.name, recentText, otherNames).then((events) => {
-          if (events.length) {
-            const storyEvts: StoryEvent[] = events.map((e) => {
-              const target = characters.find((c) => c.name === e.targetName);
-              return {
-                id: uid(),
-                characterId: target?.id ?? '',
-                sourceThreadId: thread.id,
-                sourceCharName: char.name,
-                summary: e.summary,
-                ts: Date.now(),
-              };
-            }).filter((e) => e.characterId);
-            if (storyEvts.length) onPlotEvents(storyEvts);
-          }
-        }).catch(() => {});
-      }
-    } catch (e) {
-      onSend([...next, { id: uid(), role: 'assistant', content: `（出错了：${(e as Error).message}）`, ts: Date.now() }]);
-    } finally {
-      setLoading(false);
-      setThinkingMsg(null);
+    // 清除之前的延迟回复计时器
+    if (replyDelayTimer.current) {
+      clearTimeout(replyDelayTimer.current);
+      replyDelayTimer.current = null;
     }
+
+    // 设置3秒延迟，如果3秒内没有新消息，才触发角色回复
+    replyDelayTimer.current = setTimeout(async () => {
+      setLoading(true);
+      setThinkingMsg('对方正在输入…');
+      try {
+        // 使用最新的消息列表
+        const latestMessages = pendingMessagesRef.current;
+
+        const history: ChatMsg[] = [
+          { role: 'system', content: buildSystem() },
+          ...latestMessages.map((m) => ({ role: m.role, content: m.content } as ChatMsg)),
+        ];
+        const rich = await callChatRich(api.chat, history, { temperature: 0.85, maxTokens: 800 });
+        const assistantMsg: ChatMessage = {
+          id: uid(),
+          role: 'assistant',
+          content: rich.content,
+          innerThought: rich.innerThought,
+          ts: Date.now(),
+        };
+        onSend([...latestMessages, assistantMsg]);
+
+        // 自动翻译功能
+        if (settings.autoTranslateEnabled && assistantMsg.content) {
+          // 检测是否包含外语（简单检测：包含英文字母比例超过30%）
+          const englishChars = (assistantMsg.content.match(/[a-zA-Z]/g) || []).length;
+          const totalChars = assistantMsg.content.length;
+          if (totalChars > 0 && englishChars / totalChars > 0.3) {
+            // 自动翻译
+            try {
+              const prompt = "你是一个专业的高保真中英互译翻译官。请将用户的输入文本进行精准、自然的双语互译。如果是中文文本，请翻译成纯英文；如果是英文、拼音、外文或其他混合文本，请翻译成纯中文。请不要带任何多余的解释、回复或格式（如「好的，这是翻译：」），直接输出翻译后的目标纯文本。";
+              const result = await askAI(api, prompt, assistantMsg.content);
+              setTranslations((prev) => ({ ...prev, [assistantMsg.id]: result }));
+              setShowTranslation((prev) => ({ ...prev, [assistantMsg.id]: true }));
+            } catch (err) {
+              console.error('Auto-translation error:', err);
+            }
+          }
+        }
+
+        // Media generation
+        const media: MessageMedia[] = [];
+        try {
+          if (rich.sendImage && rich.imagePrompt) {
+            const appearance = char.imagePromptTemplate ? `${char.imagePromptTemplate}, ` : '';
+            const imgUrl = await generateImage(api.image, appearance + rich.imagePrompt, { faceRef: char.faceRef });
+            media.push({ kind: 'image', url: imgUrl });
+          }
+        } catch { /* image optional */ }
+        try {
+          if (rich.sendVoice && rich.voiceText) {
+            const { url, duration } = await textToSpeech(api.voice, rich.voiceText);
+            media.push({ kind: 'voice', url, duration, text: rich.voiceText });
+          }
+        } catch { /* voice optional */ }
+        if (media.length) {
+          onSend([...latestMessages, assistantMsg, { id: uid(), role: 'assistant', content: '', ts: Date.now(), media }]);
+        }
+
+        // Background NPC & Plot Event detection
+        const recentText = latestMessages.slice(-8).map((m) => `${m.role === 'user' ? '用户' : (thread.charAltName || char.name)}：${m.content}`).join('\n');
+        const existingNames = characters.map((c) => c.name);
+
+        if (autoNpc) {
+          detectNpcs(api, char.name, recentText, existingNames).then((suggestions) => {
+            if (suggestions.length) {
+              const newChars: Character[] = suggestions.map((s) => ({
+                id: uid(),
+                name: s.name,
+                avatar: '',
+                persona: s.persona,
+                greeting: s.greeting,
+                signature: s.signature,
+                imagePromptTemplate: '',
+                createdAt: Date.now(),
+              }));
+              onNpcDetected(newChars);
+            }
+          }).catch(() => {});
+        }
+
+        const otherNames = existingNames.filter((n) => n !== char.name);
+        if (otherNames.length) {
+          detectPlotEvents(api, char.name, recentText, otherNames).then((events) => {
+            if (events.length) {
+              const storyEvts: StoryEvent[] = events.map((e) => {
+                const target = characters.find((c) => c.name === e.targetName);
+                return {
+                  id: uid(),
+                  characterId: target?.id ?? '',
+                  sourceThreadId: thread.id,
+                  sourceCharName: char.name,
+                  summary: e.summary,
+                  ts: Date.now(),
+                };
+              }).filter((e) => e.characterId);
+              if (storyEvts.length) onPlotEvents(storyEvts);
+            }
+          }).catch(() => {});
+        }
+      } catch (e) {
+        const latestMessages = pendingMessagesRef.current;
+        onSend([...latestMessages, { id: uid(), role: 'assistant', content: `（出错了：${(e as Error).message}）`, ts: Date.now() }]);
+      } finally {
+        setLoading(false);
+        setThinkingMsg(null);
+      }
+    }, 3000); // 3秒延迟
   };
 
   const sendActive = async (directive: string, localUserActionText?: string) => {
