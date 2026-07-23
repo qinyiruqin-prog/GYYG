@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Plus, MessageCircle, Trash2, Play, Pause, Eye, Mic, Sparkles, X, UserCheck, UserX, UserPlus, Smile, RefreshCw, Layers, Settings, Wifi, WifiOff } from 'lucide-react';
+import { Send, Plus, MessageCircle, Trash2, Play, Pause, Eye, Mic, Sparkles, X, UserCheck, UserX, UserPlus, Smile, RefreshCw, Layers, Settings, Wifi, WifiOff, Wallet } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { Modal, Confirm } from '../components/Sheet';
 import { ListGroup, Row } from '../components/ui';
+import { MoneyTransferBubble } from '../components/MoneyTransferBubble';
+import { SendMoneyModal } from '../components/SendMoneyModal';
 import { uid } from '../utils';
 import { getPeriodPrompt } from './PeriodScreen';
 import { callChatRich, generateImage, textToSpeech, detectNpcs, detectPlotEvents, evaluateOutgoingRequest, generateIncomingRequest, askAI, type ChatMsg } from '../api';
-import type { ApiConfig, Character, ChatThread, ChatMessage, WorldEntry, MessageMedia, StoryEvent, UserIdentity, FriendRequest, AppSettings, CallRecord } from '../types';
+import type { ApiConfig, Character, ChatThread, ChatMessage, WorldEntry, MessageMedia, StoryEvent, UserIdentity, FriendRequest, AppSettings, CallRecord, MoneyTransfer } from '../types';
 
 export function ChatScreen({
   api,
@@ -1079,6 +1081,7 @@ function ChatConversation({
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
+  const [showSendMoney, setShowSendMoney] = useState<'transfer' | 'redpacket' | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1366,6 +1369,76 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
     } finally {
       setLoading(false);
       setThinkingMsg(null);
+    }
+  };
+
+  // 发送转账/红包
+  const sendMoney = (type: 'transfer' | 'redpacket', amount: number, message: string) => {
+    const transfer: MoneyTransfer = {
+      id: uid(),
+      type,
+      amount,
+      message: message || (type === 'redpacket' ? '恭喜发财，大吉大利' : ''),
+      status: 'pending',
+      expireAt: type === 'redpacket' ? Date.now() + 24 * 60 * 60 * 1000 : undefined,
+    };
+
+    const userMsg: ChatMessage = {
+      id: uid(),
+      role: 'user',
+      content: type === 'transfer' ? `[转账] ¥${amount}` : `[红包] ¥${amount}`,
+      ts: Date.now(),
+      moneyTransfer: transfer,
+    };
+
+    const next = [...thread.messages, userMsg];
+    onSend(next);
+    setShowSendMoney(null);
+
+    // 扣除用户余额
+    const currentBalance = settings.userBalance ?? 10000;
+    onUpdateSettings({ userBalance: currentBalance - amount });
+
+    // 让角色自动回复
+    setTimeout(() => {
+      receiveMoney(transfer.id);
+    }, 2000 + Math.random() * 2000); // 2-4秒后自动领取
+  };
+
+  // 领取转账/红包
+  const receiveMoney = (transferId: string) => {
+    const updated = thread.messages.map((m) => {
+      if (m.moneyTransfer?.id === transferId) {
+        return {
+          ...m,
+          moneyTransfer: {
+            ...m.moneyTransfer,
+            status: 'received' as const,
+            receivedAt: Date.now(),
+          },
+        };
+      }
+      return m;
+    });
+
+    onSend(updated);
+
+    // 增加用户余额
+    const transfer = thread.messages.find((m) => m.moneyTransfer?.id === transferId)?.moneyTransfer;
+    if (transfer) {
+      const currentBalance = settings.userBalance ?? 10000;
+      onUpdateSettings({ userBalance: currentBalance + transfer.amount });
+
+      // 角色发送感谢消息
+      setTimeout(() => {
+        const thanksMsg: ChatMessage = {
+          id: uid(),
+          role: 'assistant',
+          content: transfer.type === 'redpacket' ? '谢谢！😊' : '收到啦，谢谢！',
+          ts: Date.now(),
+        };
+        onSend([...updated, thanksMsg]);
+      }, 1000);
     }
   };
 
@@ -1673,7 +1746,15 @@ ${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子�
                         </div>
                       ) : (
                         <>
-                          {m.content && (
+                          {/* 转账/红包 */}
+                          {m.moneyTransfer && (
+                            <MoneyTransferBubble
+                              transfer={m.moneyTransfer}
+                              isFromMe={m.role === 'user'}
+                              onReceive={receiveMoney}
+                            />
+                          )}
+                          {m.content && !m.moneyTransfer && (
                             <div className="flex flex-col gap-1 items-start w-full">
                               <div
                                 className={`px-3.5 py-2.5 rounded-2xl text-[14px] leading-relaxed ${m.role === 'user' ? 'rounded-br-md text-white font-medium' : 'glass rounded-bl-md'}`}
@@ -2210,6 +2291,24 @@ ${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子�
           >
             📞 语音通话
           </button>
+          <button
+            onClick={() => {
+              setShowSendMoney('transfer');
+              setShowPlusMenu(false);
+            }}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            💰 转账
+          </button>
+          <button
+            onClick={() => {
+              setShowSendMoney('redpacket');
+              setShowPlusMenu(false);
+            }}
+            className="w-full py-3 rounded-xl glass hover:bg-[var(--accent)] hover:text-white transition-all text-[14px] font-medium flex items-center justify-center gap-2"
+          >
+            🧧 发红包
+          </button>
         </div>
       </Modal>
 
@@ -2303,6 +2402,16 @@ ${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子�
           </div>
         )}
       </Modal>
+
+      {/* 发送转账/红包弹窗 */}
+      {showSendMoney && (
+        <SendMoneyModal
+          open={!!showSendMoney}
+          type={showSendMoney}
+          onClose={() => setShowSendMoney(null)}
+          onSend={(amount, message) => sendMoney(showSendMoney, amount, message)}
+        />
+      )}
     </AppScreen>
   );
 }

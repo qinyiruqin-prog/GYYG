@@ -138,6 +138,17 @@ export type InteractionMode = 'online' | 'offline'; // 线上=微信聊天，线
 export type MessageMedia =
   | { kind: 'image'; url: string }
   | { kind: 'voice'; url: string; duration?: number; text?: string };
+
+export interface MoneyTransfer {
+  id: ID;
+  type: 'transfer' | 'redpacket'; // 转账 | 红包
+  amount: number;
+  message?: string; // 转账备注 或 红包祝福语
+  status: 'pending' | 'received' | 'expired'; // 待领取 | 已领取 | 已过期（红包24小时过期）
+  receivedAt?: number; // 领取时间
+  expireAt?: number; // 过期时间（红包）
+}
+
 export interface ChatMessage {
   id: ID;
   role: 'user' | 'assistant';
@@ -147,6 +158,7 @@ export interface ChatMessage {
   innerThought?: string;
   // v3.0 新增
   deliveryOrder?: DeliveryOrder; // 外卖代付订单
+  moneyTransfer?: MoneyTransfer; // 转账/红包
   senderAltId?: ID; // 发送者小号ID（支持用户/角色切换小号发消息）
   mode?: InteractionMode; // 消息的交互模式（线上/线下）
   callRecord?: CallRecord; // 通话记录
