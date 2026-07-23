@@ -357,7 +357,7 @@ export function ChatScreen({
           checkAndAutoSummarize(
             api,
             activeChar,
-            activeUser,
+            currentUser,
             msgs,
             settings.memories || [],
             { type: 'chat' },
