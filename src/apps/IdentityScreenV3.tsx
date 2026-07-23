@@ -351,6 +351,7 @@ function IdentityEditorV3({
   const avatarInput = useRef<HTMLInputElement>(null);
   const faceInput = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState('');
+  const [personaPreviewMode, setPersonaPreviewMode] = useState(false);
 
   const pickImg = async (file: File | undefined, key: 'avatar' | 'faceRef') => {
     if (!file) return;
