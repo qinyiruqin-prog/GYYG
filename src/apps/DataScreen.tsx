@@ -32,10 +32,18 @@ export function DataScreen({
   };
 
   const handleClearAll = () => {
-    // 清除 localStorage
-    localStorage.clear();
-    // 刷新页面重新初始化
-    window.location.reload();
+    try {
+      // 清除所有 localStorage
+      localStorage.clear();
+
+      // 清除所有 sessionStorage
+      sessionStorage.clear();
+
+      // 强制硬刷新（绕过缓存）
+      window.location.href = window.location.href.split('?')[0] + '?_t=' + Date.now();
+    } catch (err) {
+      alert('清除失败：' + (err as Error).message);
+    }
   };
 
   const stats = {
