@@ -1123,6 +1123,8 @@ export function PhoneShell({
         <GamesScreen
           api={settings.api}
           characters={settings.characters}
+          user={settings.users.find((u) => u.id === settings.activeUserId) ?? settings.users[0]}
+          memories={settings.memories || []}
           onBack={goHome}
           onSaveGameToChat={(characterId, messages) => {
             // 找到或创建聊天会话
@@ -1152,6 +1154,9 @@ export function PhoneShell({
                 : t
             );
             updateSettings({ chatThreads: updatedThreads });
+          }}
+          onMemoryCreated={(memory) => {
+            updateSettings({ memories: [...(settings.memories || []), memory] });
           }}
         />
       );

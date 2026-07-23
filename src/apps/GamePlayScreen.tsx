@@ -2,23 +2,52 @@ import { useState, useEffect } from 'react';
 import { AppScreen } from '../components/AppScreen';
 import { ArrowRight, RefreshCw, Trophy, Sparkles } from 'lucide-react';
 import { askAI } from '../api';
-import type { Character, ApiConfig, Message } from '../types';
+import { checkAndAutoSummarize } from '../utils/autoMemory';
+import type { Character, ApiConfig, Message, UserIdentity, Memory } from '../types';
 
 interface GamePlayScreenProps {
   gameId: string;
   character: Character;
+  user: UserIdentity;
   api: ApiConfig;
+  memories: Memory[];
   onBack: () => void;
   onFinish: (messages: Message[]) => void;
+  onMemoryCreated: (memory: Memory) => void;
 }
 
-export function GamePlayScreen({ gameId, character, api, onBack, onFinish }: GamePlayScreenProps) {
+export function GamePlayScreen({ gameId, character, user, api, memories, onBack, onFinish, onMemoryCreated }: GamePlayScreenProps) {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; ts: number }>>([]);
   const [userInput, setUserInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [gameState, setGameState] = useState<any>({});
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState<'user' | 'character' | 'draw' | null>(null);
+
+  // 当消息更新时，检查是否需要自动总结记忆
+  useEffect(() => {
+    if (messages.length > 0) {
+      const chatMessages: Message[] = messages.map(m => ({
+        id: `game-${Date.now()}-${Math.random()}`,
+        role: m.role,
+        content: m.content,
+        ts: m.ts,
+      }));
+
+      checkAndAutoSummarize(
+        api,
+        character,
+        user,
+        chatMessages,
+        memories,
+        {
+          type: 'game',
+          additionalContext: `游戏类型：${getGameName(gameId)}`
+        },
+        onMemoryCreated
+      );
+    }
+  }, [messages.length]); // 仅在消息数量变化时触发
 
   // 初始化游戏
   useEffect(() => {

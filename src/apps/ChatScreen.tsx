@@ -6,6 +6,7 @@ import { ListGroup, Row } from '../components/ui';
 import { MoneyTransferBubble } from '../components/MoneyTransferBubble';
 import { SendMoneyModal } from '../components/SendMoneyModal';
 import { uid } from '../utils';
+import { checkAndAutoSummarize } from '../utils/autoMemory';
 import { getPeriodPrompt } from './PeriodScreen';
 import { callChatRich, generateImage, textToSpeech, detectNpcs, detectPlotEvents, evaluateOutgoingRequest, generateIncomingRequest, askAI, type ChatMsg } from '../api';
 import type { ApiConfig, Character, ChatThread, ChatMessage, WorldEntry, MessageMedia, StoryEvent, UserIdentity, FriendRequest, AppSettings, CallRecord, MoneyTransfer } from '../types';
@@ -349,7 +350,22 @@ export function ChatScreen({
         activeInteractEnabled={activeInteractEnabled}
         onUpdateSettings={updateSettings}
         onUpdateThread={(updater) => updateThread(active.id, updater)}
-        onSend={(msgs) => updateThread(active.id, (t) => ({ ...t, messages: msgs, updatedAt: Date.now() }))}
+        onSend={(msgs) => {
+          updateThread(active.id, (t) => ({ ...t, messages: msgs, updatedAt: Date.now() }));
+
+          // 自动记忆总结检查
+          checkAndAutoSummarize(
+            api,
+            activeChar,
+            activeUser,
+            msgs,
+            settings.memories || [],
+            { type: 'chat' },
+            (memory) => {
+              updateSettings({ memories: [...(settings.memories || []), memory] });
+            }
+          );
+        }}
         onBack={() => setActiveThreadId(null)}
         onDelete={() => { onChange(threads.filter((t) => t.id !== active.id)); setActiveThreadId(null); }}
         onNpcDetected={(npcs) => setPendingNpcs(npcs)}

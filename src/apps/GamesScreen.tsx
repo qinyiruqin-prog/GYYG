@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { AppScreen } from '../components/AppScreen';
 import { GamePlayScreen } from './GamePlayScreen';
-import type { Character, ApiConfig, Message } from '../types';
+import type { Character, ApiConfig, Message, UserIdentity, Memory } from '../types';
 
 interface GamesScreenProps {
   api: ApiConfig;
   characters: Character[];
+  user: UserIdentity;
+  memories: Memory[];
   onBack: () => void;
   onSaveGameToChat: (characterId: string, messages: Message[]) => void;
+  onMemoryCreated: (memory: Memory) => void;
 }
 
 export interface MiniGame {
@@ -70,7 +73,7 @@ const games: MiniGame[] = [
   },
 ];
 
-export function GamesScreen({ api, characters, onBack, onSaveGameToChat }: GamesScreenProps) {
+export function GamesScreen({ api, characters, user, memories, onBack, onSaveGameToChat, onMemoryCreated }: GamesScreenProps) {
   const [selectedGameId, setSelectedGameId] = useState<string>('');
   const [selectedCharId, setSelectedCharId] = useState<string>('');
   const [playing, setPlaying] = useState(false);
@@ -121,9 +124,12 @@ export function GamesScreen({ api, characters, onBack, onSaveGameToChat }: Games
       <GamePlayScreen
         gameId={selectedGameId}
         character={selectedChar}
+        user={user}
         api={api}
+        memories={memories}
         onBack={() => setPlaying(false)}
         onFinish={handleGameFinish}
+        onMemoryCreated={onMemoryCreated}
       />
     );
   }
