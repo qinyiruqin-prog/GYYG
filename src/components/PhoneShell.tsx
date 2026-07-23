@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { callChatRich, generateIncomingRequest, generateImage, textToSpeech, askAI, type ChatMsg } from '../api';
 import { uid } from '../utils';
+import { generateBotUser, COMMENT_TEMPLATES, PRESET_POSTS } from '../utils/botUsers';
 import { Desktop } from './Desktop';
 import { StatusBar } from './StatusBar';
 import { ComingSoon } from './ComingSoon';
@@ -546,7 +547,44 @@ export function PhoneShell({
           onBack={goHome}
         />
       );
-    if (open === 'forum')
+    if (open === 'forum') {
+      // 初始化预制帖子（仅在首次打开且论坛为空时）
+      useEffect(() => {
+        if (settings.forumPosts.length === 0) {
+          const presetPosts = PRESET_POSTS.map((preset, idx) => {
+            const botUser = generateBotUser();
+            const replies = [];
+
+            // 每个预制帖子随机添加 2-5 条评论
+            const replyCount = Math.floor(Math.random() * 4) + 2;
+            for (let i = 0; i < replyCount; i++) {
+              const replyBot = generateBotUser();
+              replies.push({
+                id: uid(),
+                authorName: replyBot.name,
+                authorAvatar: replyBot.avatar,
+                text: COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)],
+                ts: Date.now() - (idx * 3600000) - (i * 600000) // 错开时间
+              });
+            }
+
+            return {
+              id: uid(),
+              title: preset.title,
+              authorName: botUser.name,
+              authorAvatar: botUser.avatar,
+              body: preset.body,
+              board: preset.board,
+              views: Math.floor(Math.random() * 800) + 100,
+              replies,
+              ts: Date.now() - idx * 3600000 // 每个帖子错开1小时
+            };
+          });
+
+          updateSettings({ forumPosts: presetPosts });
+        }
+      }, []);
+
       return (
         <ForumScreen
           api={settings.api}
@@ -555,74 +593,63 @@ export function PhoneShell({
           characters={settings.characters}
           onChange={(forumPosts) => updateSettings({ forumPosts })}
           onRefresh={async () => {
-            // AI 自动生成新帖子和评论
-            const chars = settings.characters;
-            if (chars.length === 0) return;
-
-            // 随机生成 1-3 个新帖子
-            const newPostsCount = Math.floor(Math.random() * 3) + 1;
+            // AI 自动生成人机帖子和评论
             const newPosts: any[] = [];
+            const boards = ['技术', '日常', '故事', '求助'];
+
+            // 生成 2-4 个新帖子（人机发布）
+            const newPostsCount = Math.floor(Math.random() * 3) + 2;
 
             for (let i = 0; i < newPostsCount; i++) {
-              const randomChar = chars[Math.floor(Math.random() * chars.length)];
-              const boards = ['技术', '日常', '故事', '求助'];
+              const botUser = generateBotUser();
               const board = boards[Math.floor(Math.random() * boards.length)];
 
               try {
-                const sys = `你在模拟论坛发帖。角色：${randomChar.name}（${randomChar.signature || '普通网友'}）。请生成一个有趣的帖子，标题+正文，正文100-200字，口语化。只输出"标题\n正文"，不要额外解释。`;
-                const raw = await askAI(settings.api, sys, `板块：${board}\n请生成一条帖子：`, { temperature: 0.9, maxTokens: 400 });
+                const sys = `你在模拟论坛发帖。网友昵称：${botUser.name}。请生成一个有趣的帖子，标题+正文，正文100-200字，口语化、自然。只输出"标题\n正文"，不要额外解释。`;
+                const raw = await askAI(settings.api, sys, `板块：${board}\n请生成一条真实感强的帖子：`, { temperature: 0.95, maxTokens: 400 });
                 const [title, ...rest] = raw.split('\n');
 
                 newPosts.push({
                   id: uid(),
                   title: title.trim(),
-                  authorName: randomChar.name,
-                  authorAvatar: randomChar.avatar,
+                  authorName: botUser.name,
+                  authorAvatar: botUser.avatar,
                   body: rest.join('\n').trim(),
                   board,
-                  views: Math.floor(Math.random() * 200),
+                  views: Math.floor(Math.random() * 500) + 50,
                   replies: [],
-                  ts: Date.now() - i * 60000 // 让帖子有时间差
+                  ts: Date.now() - i * 60000 * 5 // 错开5分钟
                 });
               } catch (e) {
-                console.error('生成帖子失败:', e);
+                console.error('生成人机帖子失败:', e);
               }
             }
 
-            // 给现有帖子随机添加 2-5 条评论
-            const existingPosts = settings.forumPosts.slice(0, 3); // 只给前3个帖子加评论
+            // 给现有帖子添加人机评论（前5个帖子）
+            const existingPosts = settings.forumPosts.slice(0, 5);
             const updatedPosts = settings.forumPosts.map(post => {
               if (!existingPosts.includes(post)) return post;
 
-              const newRepliesCount = Math.floor(Math.random() * 4) + 2; // 2-5条
+              const newRepliesCount = Math.floor(Math.random() * 6) + 3; // 3-8条评论
               const newReplies = [];
 
               for (let i = 0; i < newRepliesCount; i++) {
-                const randomChar = chars[Math.floor(Math.random() * chars.length)];
-                const replyTexts = [
-                  '哈哈哈笑死我了',
-                  '同感！我也遇到过这种情况',
-                  '楼主说得对',
-                  '有道理，学到了',
-                  '这个观点我不太认同',
-                  '支持一下！',
-                  '太真实了',
-                  '确实如此',
-                ];
-                const text = replyTexts[Math.floor(Math.random() * replyTexts.length)];
+                const botUser = generateBotUser();
+                const text = COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)];
 
                 newReplies.push({
                   id: uid(),
-                  authorName: randomChar.name,
-                  authorAvatar: randomChar.avatar,
-                  text,
+                  authorName: botUser.name,
+                  authorAvatar: botUser.avatar,
+                  text: text,
                   ts: Date.now() - i * 30000
                 });
               }
 
               return {
                 ...post,
-                replies: [...post.replies, ...newReplies]
+                replies: [...post.replies, ...newReplies],
+                views: post.views + Math.floor(Math.random() * 50) + 10
               };
             });
 
@@ -632,6 +659,7 @@ export function PhoneShell({
           onBack={goHome}
         />
       );
+    }
     if (open === 'worldbook')
       return (
         <CharacterScreen
