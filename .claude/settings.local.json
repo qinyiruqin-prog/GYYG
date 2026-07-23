@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /c/Users/qxn/Downloads/.claude)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(explorer.exe C:\\\\\\\\Users\\\\\\\\qxn\\\\\\\\Downloads\\\\\\\\GYYG-improved\\\\\\\\dist)",
+      "Bash(start \"\" \"C:\\\\Users\\\\qxn\\\\Downloads\\\\GYYG-improved\\\\dist\")",
+      "Bash(echo \"C:\\\\\\\\Users\\\\\\\\qxn\\\\\\\\Downloads\\\\\\\\GYYG-improved\")",
+      "Bash(echo \"C:\\\\\\\\Users\\\\\\\\qxn\\\\\\\\Downloads\\\\\\\\GYYG-improved\\\\\\\\dist\")",
+      "Bash(vercel --version)",
+      "Bash(surge --domain yangyangji-v3.surge.sh)",
+      "Bash(xargs grep -l \"theme\")",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(curl -s http://localhost:4173)",
+      "Bash(git fetch *)",
+      "Bash(git push *)",
+      "Bash(git ls-remote *)",
+      "Bash(awk '{print $1}')",
+      "Bash(curl -s --connect-timeout 10 https://api.github.com/ -o /dev/null)"
+    ]
+  }
+}

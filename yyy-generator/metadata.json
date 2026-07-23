@@ -1,0 +1,6 @@
+{
+  "name": "羊羊自动生成器.禁止二改二传",
+  "description": "一个用于自动生成高品质用户人设、Char虚拟角色人设和小说/游戏世界观世界书的专业创作工具。支持自定义 API 和极高生成字数限制。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
