@@ -130,15 +130,15 @@ export function PhoneShell({
         const botUser = generateBotUser();
         const replies = [];
 
-        // 每个预制帖子随机添加 3-6 条一级评论
-        const replyCount = Math.floor(Math.random() * 4) + 3;
+        // 每个预制帖子随机添加 15-30 条一级评论（更热闹）
+        const replyCount = Math.floor(Math.random() * 16) + 15;
         for (let i = 0; i < replyCount; i++) {
           const replyBot = generateBotUser();
           const subReplies = [];
 
-          // 50% 概率这条评论有楼中楼回复
-          if (Math.random() > 0.5) {
-            const subReplyCount = Math.floor(Math.random() * 3) + 1; // 1-3 条楼中楼
+          // 70% 概率这条评论有楼中楼回复
+          if (Math.random() > 0.3) {
+            const subReplyCount = Math.floor(Math.random() * 5) + 2; // 2-6 条楼中楼
             for (let j = 0; j < subReplyCount; j++) {
               const subBot = generateBotUser();
               subReplies.push({
@@ -147,7 +147,7 @@ export function PhoneShell({
                 authorAvatar: subBot.avatar,
                 text: COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)],
                 replyTo: replyBot.name,
-                ts: Date.now() - (idx * 3600000) - (i * 600000) - (j * 300000)
+                ts: Date.now() - (idx * 3600000) - (i * 300000) - (j * 120000)
               });
             }
           }
@@ -157,7 +157,7 @@ export function PhoneShell({
             authorName: replyBot.name,
             authorAvatar: replyBot.avatar,
             text: COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)],
-            ts: Date.now() - (idx * 3600000) - (i * 600000),
+            ts: Date.now() - (idx * 3600000) - (i * 300000),
             replies: subReplies.length > 0 ? subReplies : undefined
           });
         }
@@ -169,7 +169,7 @@ export function PhoneShell({
           authorAvatar: botUser.avatar,
           body: preset.body,
           board: preset.board,
-          views: Math.floor(Math.random() * 800) + 100,
+          views: Math.floor(Math.random() * 2000) + 500, // 更高的浏览量
           replies,
           ts: Date.now() - idx * 3600000 // 每个帖子错开1小时
         };

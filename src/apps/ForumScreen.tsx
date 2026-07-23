@@ -5,6 +5,7 @@ import { Modal, Confirm } from '../components/Sheet';
 import { ListGroup, Row } from '../components/ui';
 import { uid } from '../utils';
 import { askAI } from '../api';
+import { generateBotUser, COMMENT_TEMPLATES } from '../utils/botUsers';
 import type { ApiConfig, ForumPost, UserIdentity, Character } from '../types';
 
 const BOARDS = ['综合', '技术', '日常', '故事', '求助'];
@@ -123,10 +124,56 @@ export function ForumScreen({
 
   const del = (p: ForumPost) => onChange(posts.filter((x) => x.id !== p.id));
 
+  // 给单个帖子刷新评论（只在帖子详情页调用）
+  const refreshPostComments = (p: ForumPost) => {
+    const newRepliesCount = Math.floor(Math.random() * 8) + 5; // 5-12 条新评论
+    const newReplies = [];
+
+    for (let i = 0; i < newRepliesCount; i++) {
+      const botUser = generateBotUser();
+      const text = COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)];
+      const subReplies = [];
+
+      // 60% 概率带楼中楼
+      if (Math.random() > 0.4) {
+        const subCount = Math.floor(Math.random() * 4) + 1; // 1-4 条楼中楼
+        for (let j = 0; j < subCount; j++) {
+          const subBot = generateBotUser();
+          subReplies.push({
+            id: uid(),
+            authorName: subBot.name,
+            authorAvatar: subBot.avatar,
+            text: COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)],
+            replyTo: botUser.name,
+            ts: Date.now() - i * 20000 - j * 10000
+          });
+        }
+      }
+
+      newReplies.push({
+        id: uid(),
+        authorName: botUser.name,
+        authorAvatar: botUser.avatar,
+        text: text,
+        ts: Date.now() - i * 20000,
+        replies: subReplies.length > 0 ? subReplies : undefined
+      });
+    }
+
+    const updatedPost = {
+      ...p,
+      replies: [...p.replies, ...newReplies],
+      views: p.views + Math.floor(Math.random() * 30) + 10
+    };
+
+    update(p.id, () => updatedPost);
+    setActive(updatedPost);
+  };
+
   if (active) {
     const p = posts.find((x) => x.id === active.id) ?? active;
     return (
-      <AppScreen title={p.title} onBack={() => setActive(null)} noPad right={<div><button onClick={handleRefresh} className="tap txt-dim mr-3"><RefreshCcw size={18} className={refreshing ? 'animate-spin' : ''} /></button><button onClick={() => del(p)} className="tap txt-dim"><Trash2 size={18} /></button></div>}>
+      <AppScreen title={p.title} onBack={() => setActive(null)} noPad right={<div><button onClick={() => { refreshPostComments(p); }} className="tap txt-dim mr-3"><RefreshCcw size={18} className={refreshing ? 'animate-spin' : ''} /></button><button onClick={() => del(p)} className="tap txt-dim"><Trash2 size={18} /></button></div>}>
         <div className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-4">
             <div className="font-title text-lg mb-2">{p.title}</div>
