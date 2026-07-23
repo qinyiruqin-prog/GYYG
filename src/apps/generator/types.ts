@@ -1,4 +1,4 @@
-export type SettingType = "user_persona" | "xr_persona" | "worldbook";
+export type SettingType = "user_persona" | "xr_persona" | "worldbook" | "linked_story";
 
 export interface SettingVersion {
   timestamp: string;
@@ -18,6 +18,12 @@ export interface GeneratedSetting {
   tone: string;
   customStructure?: string;
   versions: SettingVersion[];
+  // 关联生成专属字段
+  linkedContent?: {
+    userPersona: string;
+    charPersona: string;
+    worldbook: string;
+  };
 }
 
 export interface PromptTemplate {

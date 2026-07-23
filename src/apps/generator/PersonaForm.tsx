@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { SettingType, PromptTemplate } from "./types";
 import { PROMPT_TEMPLATES } from "./PromptSuggestions";
-import { Sparkles, FileText, Bot, Compass, Sliders } from "lucide-react";
+import { Sparkles, FileText, Bot, Compass, Sliders, Link2 } from "lucide-react";
 
 interface PersonaFormProps {
   onSubmit: (config: {
@@ -66,6 +66,24 @@ export const PersonaForm: React.FC<PersonaFormProps> = ({ onSubmit, loading }) =
           <span className="text-[10px] txt-accent bg-[var(--icon-bg-active)] px-1.5 py-0.5 rounded">必选</span>
         </label>
         <div className="grid grid-cols-1 gap-3">
+          {/* 关联生成（新增） */}
+          <button
+            type="button"
+            onClick={() => { setType("linked_story"); setWordCount(1500); }}
+            className={`flex flex-col items-start p-4 rounded-xl border text-left transition-all ${cardCls("linked_story")}`}
+          >
+            <div className={`p-2 rounded-lg border mb-3 ${iconBoxCls("linked_story", "violet")}`}>
+              <Link2 size={18} />
+            </div>
+            <span className="font-semibold text-[14px] flex items-center gap-1.5">
+              🔗 关联剧情生成 (三位一体)
+              <span className="text-[10px] bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white px-2 py-0.5 rounded-full">NEW</span>
+            </span>
+            <span className="txt-faint text-[12px] mt-1 leading-relaxed">
+              一次生成：用户人设 + 角色人设 + 世界书，三者高度关联、剧情一致。适合CP剧情、互动故事。
+            </span>
+          </button>
+
           {/* 用户人设 */}
           <button
             type="button"

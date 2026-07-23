@@ -12,6 +12,38 @@ import { Sparkles, ArrowLeft, ArrowRight } from "lucide-react";
 const LOCAL_STORAGE_KEY = "persona_generator_saved_settings_v1";
 
 const SYSTEM_PROMPTS: Record<string, (wc: number, style: string, tone: string, extra: string) => string> = {
+  linked_story: (wc, style, tone, extra) => [
+    "你是一名专业的剧情设定师，负责生成「三位一体」的关联剧情设定。",
+    "根据用户提供的剧情关键词（如：继兄继妹地下恋情），一次性生成三个高度关联的设定：",
+    "",
+    "## 输出结构（严格按此格式，用 Markdown H1 分隔三部分）：",
+    "",
+    "# 【用户人设】",
+    "## 1. 基本信息 (姓名、性别、年龄、外貌)",
+    "## 2. 性格特点 (核心性格、优缺点、习惯)",
+    "## 3. 背景故事 (成长经历、与角色的关系)",
+    "## 4. 说话风格与口头禅",
+    "## 5. 兴趣爱好与技能",
+    "",
+    "# 【角色人设】",
+    "## 1. 基本信息 (姓名、身份、外貌特征)",
+    "## 2. 性格与情感模式 (对用户的态度、情感边界)",
+    "## 3. 背景设定 (与用户的相识关系)",
+    "## 4. 互动风格 (语言习惯、表情动作)",
+    "## 5. 特殊设定 (独特之处)",
+    "",
+    "# 【世界书】",
+    "## 1. 世界观概述 (时代背景、基调氛围)",
+    "## 2. 地理与环境 (故事发生地、关键场景)",
+    "## 3. 社会体系 (社会关系、禁忌规则)",
+    "## 4. 关键事件 (促成剧情的历史事件)",
+    "## 5. 重要设定 (专有名词、核心概念)",
+    "",
+    "字数：" + wc + "字（三部分总和）。风格：" + (style || "自然写实") + "。语调：" + (tone || "自然") + "。",
+    extra ? "额外自定义字段：" + extra : "",
+    "**重点**：三者剧情必须高度关联、逻辑自洽，用户和角色的关系要清晰明确。",
+  ].join("\n"),
+
   user_persona: (wc, style, tone, extra) => [
     "你是一名专业的角色设定师，负责为用户生成用户人设 (User Persona)。",
     "根据用户提供的关键词、描述或风格基调，生成一份完整、细致的人设设定。",
@@ -133,6 +165,16 @@ export function GeneratorScreen({
 
       const content = await askAI(api, systemPrompt, config.prompt, { temperature: 0.85, maxTokens: config.wordCount * 2 });
 
+      // 关联生成模式：解析三部分内容
+      let linkedContent: { userPersona: string; charPersona: string; worldbook: string } | undefined;
+      if (config.type === 'linked_story') {
+        const parts = content.split(/^#\s+【(.+?)】/gm);
+        const userPersona = parts[2] || '';
+        const charPersona = parts[4] || '';
+        const worldbook = parts[6] || '';
+        linkedContent = { userPersona, charPersona, worldbook };
+      }
+
       const newSetting: GeneratedSetting = {
         id: uid(),
         type: config.type,
@@ -145,6 +187,7 @@ export function GeneratorScreen({
         tone: config.tone,
         customStructure: config.customStructure,
         versions: [{ timestamp: new Date().toISOString(), content }],
+        linkedContent,
       };
       setCurrentSetting(newSetting);
       setCurrentVersionIdx(0);
@@ -220,16 +263,60 @@ export function GeneratorScreen({
         return basicMatch[0].replace(/##.*?\n/, '').trim().slice(0, 150);
       }
 
-      return content.slice(0, 100).replace(/[#*\n]/g, ' ').trim();
+      return text.slice(0, 100).replace(/[#*\n]/g, ' ').trim();
     };
 
     // 提取签名（性格特点或一句话介绍）
     const extractSignature = (text: string): string => {
       const sigMatch = text.match(/(?:性格|个性|特点)[:：]?\s*([^\n]+)/i);
       if (sigMatch && sigMatch[1]) return sigMatch[1].trim().slice(0, 50);
-      return content.replace(/[#*\n]/g, ' ').slice(0, 50).trim();
+      return text.replace(/[#*\n]/g, ' ').slice(0, 50).trim();
     };
 
+    // 关联生成模式：分别导入三部分
+    if (currentSetting.type === "linked_story" && currentSetting.linkedContent) {
+      const { userPersona, charPersona, worldbook } = currentSetting.linkedContent;
+
+      // 导入用户
+      const userName = extractName(userPersona);
+      onAddUser({
+        id: uid(),
+        nickname: userName,
+        signature: extractSignature(userPersona),
+        persona: userPersona,
+        imagePromptTemplate: extractImagePrompt(userPersona),
+        isAlt: false,
+        createdAt: Date.now()
+      });
+
+      // 导入角色
+      const charName = extractName(charPersona);
+      onAddCharacter({
+        id: uid(),
+        name: charName,
+        avatar: "",
+        signature: extractSignature(charPersona),
+        persona: charPersona,
+        greeting: "你好！我是" + charName + "。",
+        imagePromptTemplate: extractImagePrompt(charPersona),
+        createdAt: Date.now(),
+      });
+
+      // 导入世界书
+      const worldKey = currentSetting.prompt.slice(0, 20);
+      onAddWorldEntries([{
+        id: uid(),
+        key: worldKey,
+        content: worldbook,
+        priority: 5,
+        ts: Date.now()
+      }]);
+
+      triggerToast(`已导入关联剧情：用户「${userName}」+ 角色「${charName}」+ 世界书！`);
+      return;
+    }
+
+    // 单独生成模式
     const extractedName = extractName(content);
     const imagePrompt = extractImagePrompt(content);
     const signature = extractSignature(content);
