@@ -68,42 +68,115 @@ export function CharacterScreen({
 
   const handleFileImport = (file: File | undefined) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
-        parseAndAddChar(text);
-      } catch (err: any) {
-        alert('解析失败：' + err.message);
-      }
-    };
-    reader.readAsText(file);
+
+    // 检查文件类型
+    if (file.type.startsWith('image/')) {
+      // PNG 格式角色卡（Tavern 格式）
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          const uint8Array = new Uint8Array(arrayBuffer);
+
+          // 查找 tEXt chunk 中的 chara 数据
+          let charaJson = '';
+          for (let i = 0; i < uint8Array.length - 4; i++) {
+            // 查找 "tEXt" 标记
+            if (uint8Array[i] === 0x74 && uint8Array[i+1] === 0x45 &&
+                uint8Array[i+2] === 0x58 && uint8Array[i+3] === 0x74) {
+              // 找到 tEXt，向后查找 "chara\0"
+              let j = i + 4;
+              while (j < uint8Array.length - 6) {
+                if (uint8Array[j] === 0x63 && uint8Array[j+1] === 0x68 &&
+                    uint8Array[j+2] === 0x61 && uint8Array[j+3] === 0x72 &&
+                    uint8Array[j+4] === 0x61 && uint8Array[j+5] === 0x00) {
+                  // 找到 "chara\0"，后面是 base64 编码的数据
+                  j += 6;
+                  const dataStart = j;
+                  // 读取到下一个 chunk 或文件结束
+                  while (j < uint8Array.length && uint8Array[j] !== 0x00) {
+                    j++;
+                  }
+                  const base64Data = new TextDecoder().decode(uint8Array.slice(dataStart, j));
+                  charaJson = atob(base64Data);
+                  break;
+                }
+                j++;
+              }
+              if (charaJson) break;
+            }
+          }
+
+          if (charaJson) {
+            parseAndAddChar(charaJson);
+          } else {
+            alert('未能从 PNG 图片中提取角色卡数据。请确认这是有效的 Tavern 格式角色卡。');
+          }
+        } catch (err: any) {
+          alert('PNG 解析失败：' + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // JSON 文件
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const text = event.target?.result as string;
+          parseAndAddChar(text);
+        } catch (err: any) {
+          alert('解析失败：' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
   };
 
   const parseAndAddChar = (text: string) => {
     try {
       const parsed = JSON.parse(text);
-      const data = parsed.data || parsed;
-      
+
+      // Tavern V2 Spec 格式
+      const isV2 = parsed.spec === 'chara_card_v2';
+      const data = isV2 ? parsed.data : (parsed.data || parsed);
+
+      // 提取基本信息
       const charName = data.name || data.char_name || '';
-      const charPersona = data.personality || data.description || data.persona || '';
-      const charGreeting = data.first_mes || data.greeting || '';
-      const charSignature = data.creator_notes || data.signature || data.scenario || '';
-      const charAvatar = data.avatar || '';
+
+      // V2 格式：description 是主要人设描述
+      let charPersona = data.description || data.personality || data.persona || '';
+
+      // V2 格式：可能还有 personality, scenario 等字段
+      if (data.personality && data.personality !== charPersona) {
+        charPersona += '\n\n## 性格\n' + data.personality;
+      }
+      if (data.scenario) {
+        charPersona += '\n\n## 场景设定\n' + data.scenario;
+      }
+
+      const charGreeting = data.first_mes || data.greeting || data.mes_example || '';
+      const charSignature = data.creator_notes || data.signature || data.tagline || '';
+
+      // 头像处理
+      let charAvatar = data.avatar || '';
+      // V2 格式可能是 data URL
+      if (charAvatar && !charAvatar.startsWith('data:') && !charAvatar.startsWith('http')) {
+        charAvatar = ''; // 忽略无效头像
+      }
 
       if (charName) {
         const newChar: Character = {
           id: uid(),
           name: charName,
           avatar: charAvatar,
-          signature: charSignature,
+          signature: charSignature.slice(0, 100) || charPersona.slice(0, 50),
           persona: charPersona,
           greeting: charGreeting,
           imagePromptTemplate: data.imagePromptTemplate || data.img_prompt || '',
           createdAt: Date.now()
         };
         onSave(newChar);
-        alert(`成功导入角色卡「${charName}」！`);
+        alert(`成功导入角色卡「${charName}」！${isV2 ? '（Tavern V2 格式）' : ''}`);
         setImporting(false);
         setPastedText('');
       } else {
@@ -115,7 +188,7 @@ export function CharacterScreen({
       let signature = '';
       let persona = '';
       let greeting = '';
-      
+
       lines.forEach((line) => {
         const index = line.indexOf(':');
         const zhIndex = line.indexOf('：');
@@ -123,7 +196,7 @@ export function CharacterScreen({
         if (splitIdx > 0) {
           const k = line.substring(0, splitIdx).trim();
           const v = line.substring(splitIdx + 1).trim();
-          
+
           if (k.includes('名') || k.toLowerCase() === 'name') {
             name = v;
           } else if (k.includes('签') || k.includes('介绍') || k.toLowerCase() === 'signature') {
@@ -156,7 +229,7 @@ export function CharacterScreen({
         setImporting(false);
         setPastedText('');
       } else {
-        alert('未能识别角色。请确保文本包含“名字：xxx”或“角色名：xxx”等描述。');
+        alert('未能识别角色。请确保文本包含”名字：xxx”或”角色名：xxx”等描述。');
       }
     }
   };
