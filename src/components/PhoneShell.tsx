@@ -123,6 +123,43 @@ export function PhoneShell({
     }
   }, [banner]);
 
+  // 初始化论坛预制帖子
+  useEffect(() => {
+    if (open === 'forum' && settings.forumPosts.length === 0) {
+      const presetPosts = PRESET_POSTS.map((preset, idx) => {
+        const botUser = generateBotUser();
+        const replies = [];
+
+        // 每个预制帖子随机添加 2-5 条评论
+        const replyCount = Math.floor(Math.random() * 4) + 2;
+        for (let i = 0; i < replyCount; i++) {
+          const replyBot = generateBotUser();
+          replies.push({
+            id: uid(),
+            authorName: replyBot.name,
+            authorAvatar: replyBot.avatar,
+            text: COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)],
+            ts: Date.now() - (idx * 3600000) - (i * 600000) // 错开时间
+          });
+        }
+
+        return {
+          id: uid(),
+          title: preset.title,
+          authorName: botUser.name,
+          authorAvatar: botUser.avatar,
+          body: preset.body,
+          board: preset.board,
+          views: Math.floor(Math.random() * 800) + 100,
+          replies,
+          ts: Date.now() - idx * 3600000 // 每个帖子错开1小时
+        };
+      });
+
+      updateSettings({ forumPosts: presetPosts });
+    }
+  }, [open, settings.forumPosts.length]);
+
   useEffect(() => {
     // Setup background automatic active interaction check
     const interval = setInterval(async () => {
@@ -547,44 +584,7 @@ export function PhoneShell({
           onBack={goHome}
         />
       );
-    if (open === 'forum') {
-      // 初始化预制帖子（仅在首次打开且论坛为空时）
-      useEffect(() => {
-        if (settings.forumPosts.length === 0) {
-          const presetPosts = PRESET_POSTS.map((preset, idx) => {
-            const botUser = generateBotUser();
-            const replies = [];
-
-            // 每个预制帖子随机添加 2-5 条评论
-            const replyCount = Math.floor(Math.random() * 4) + 2;
-            for (let i = 0; i < replyCount; i++) {
-              const replyBot = generateBotUser();
-              replies.push({
-                id: uid(),
-                authorName: replyBot.name,
-                authorAvatar: replyBot.avatar,
-                text: COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)],
-                ts: Date.now() - (idx * 3600000) - (i * 600000) // 错开时间
-              });
-            }
-
-            return {
-              id: uid(),
-              title: preset.title,
-              authorName: botUser.name,
-              authorAvatar: botUser.avatar,
-              body: preset.body,
-              board: preset.board,
-              views: Math.floor(Math.random() * 800) + 100,
-              replies,
-              ts: Date.now() - idx * 3600000 // 每个帖子错开1小时
-            };
-          });
-
-          updateSettings({ forumPosts: presetPosts });
-        }
-      }, []);
-
+    if (open === 'forum')
       return (
         <ForumScreen
           api={settings.api}
@@ -659,7 +659,6 @@ export function PhoneShell({
           onBack={goHome}
         />
       );
-    }
     if (open === 'worldbook')
       return (
         <CharacterScreen
