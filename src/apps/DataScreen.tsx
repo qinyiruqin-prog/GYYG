@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Download, Upload, AlertTriangle } from 'lucide-react';
+import { Download, Upload, AlertTriangle, Trash2 } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { ListGroup, Row } from '../components/ui';
 import { Confirm, Modal } from '../components/Sheet';
@@ -17,6 +17,7 @@ export function DataScreen({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmImport, setConfirmImport] = useState<PersistShape | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [err, setErr] = useState('');
 
   const handleFile = async (file?: File) => {
@@ -28,6 +29,13 @@ export function DataScreen({
     } catch (e) {
       setErr((e as Error).message || '导入失败');
     }
+  };
+
+  const handleClearAll = () => {
+    // 清除 localStorage
+    localStorage.clear();
+    // 刷新页面重新初始化
+    window.location.reload();
   };
 
   const stats = {
@@ -64,6 +72,11 @@ export function DataScreen({
           hint="从备份文件恢复"
           onClick={() => fileRef.current?.click()}
         />
+        <Row
+          label={<span className="flex items-center gap-2 text-[var(--warn)]"><Trash2 size={17} /> 清除所有数据</span>}
+          hint="删除所有本地数据并重置应用"
+          onClick={() => setConfirmClear(true)}
+        />
       </ListGroup>
 
       {err && (
@@ -87,6 +100,21 @@ export function DataScreen({
         danger
         onConfirm={() => { if (confirmImport) onImport(confirmImport); setConfirmImport(null); }}
         onCancel={() => setConfirmImport(null)}
+      />
+
+      <Confirm
+        open={confirmClear}
+        title="清除所有数据"
+        message={
+          <span className="flex flex-col items-center gap-2">
+            <AlertTriangle size={24} className="text-[var(--warn)]" />
+            <span>这将删除所有角色、聊天、设置、论坛帖子等所有数据，且无法恢复！确定继续？</span>
+          </span>
+        }
+        confirmText="清除所有数据"
+        danger
+        onConfirm={handleClearAll}
+        onCancel={() => setConfirmClear(false)}
       />
     </AppScreen>
   );
