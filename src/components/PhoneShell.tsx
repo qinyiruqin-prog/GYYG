@@ -1196,7 +1196,43 @@ export function PhoneShell({
           onBack={goHome}
         />
       );
-    if (open === 'discover') return <DiscoverScreen onBack={goHome} />;
+    if (open === 'discover')
+      return (
+        <DiscoverScreen
+          api={settings.api}
+          me={settings.users.find((u) => u.id === settings.activeUserId) ?? settings.users[0]}
+          characters={settings.characters}
+          onAddCharacter={(character) => {
+            updateSettings({ characters: [...settings.characters, character] });
+          }}
+          onStartChat={(characterId) => {
+            setInitialChatThreadId(null);
+            setOpen('chat');
+            // 找到或创建会话
+            const activeUser = settings.users.find((u) => u.id === settings.activeUserId) ?? settings.users[0];
+            let threads = settings.chatThreads.filter(
+              (t: any) => t.userId === activeUser.id && t.characterId === characterId && !t.charAltName
+            );
+
+            if (threads.length === 0) {
+              const newThreadId = 'discover-thread-' + Math.random().toString(36).substring(2);
+              const newThread = {
+                id: newThreadId,
+                characterId,
+                userId: activeUser.id,
+                messages: [],
+                updatedAt: Date.now(),
+                sharedMemory: [],
+              };
+              updateSettings({ chatThreads: [newThread, ...settings.chatThreads] });
+              setInitialChatThreadId(newThreadId);
+            } else {
+              setInitialChatThreadId(threads[0].id);
+            }
+          }}
+          onBack={goHome}
+        />
+      );
     if (open === 'closet')
       return (
         <ClosetScreen
