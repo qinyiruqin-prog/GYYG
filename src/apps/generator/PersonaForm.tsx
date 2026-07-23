@@ -47,6 +47,11 @@ export const PersonaForm: React.FC<PersonaFormProps> = ({ onSubmit, loading }) =
     onSubmit({ type, prompt, wordCount, customStyle, tone, customStructure });
   };
 
+  const handleQuickGenerate = (targetType: SettingType) => {
+    if (!prompt.trim()) return;
+    onSubmit({ type: targetType, prompt, wordCount, customStyle, tone, customStructure });
+  };
+
   const cardCls = (t: SettingType) =>
     type === t
       ? "glass-strong border-[var(--accent)] shadow-lg"
@@ -273,27 +278,71 @@ export const PersonaForm: React.FC<PersonaFormProps> = ({ onSubmit, loading }) =
       </div>
 
       {/* 5. 提交按钮 */}
-      <button
-        type="submit"
-        disabled={loading || !prompt.trim()}
-        className="tap w-full py-3 px-4 rounded-xl font-semibold text-[14px] flex items-center justify-center gap-2 disabled:opacity-40"
-        style={{ background: "var(--accent)", color: "var(--bg)" }}
-      >
-        {loading ? (
-          <>
-            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            <span>AI 深度编织中，请稍候...</span>
-          </>
-        ) : (
-          <>
-            <Sparkles size={16} />
-            <span>立即唤醒 AI 自动生成人设/世界书</span>
-          </>
+      <div className="space-y-3">
+        <div className="text-[12px] txt-dim font-medium mb-2">
+          使用同一个提示词，选择生成：
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => handleQuickGenerate("user_persona")}
+            disabled={loading || !prompt.trim()}
+            className="tap py-3 px-3 rounded-xl font-medium text-[13px] flex flex-col items-center justify-center gap-1.5 disabled:opacity-40 glass border-2 border-[var(--border)] hover:border-rose-500/50 transition-all"
+          >
+            <FileText size={16} className="text-rose-400" />
+            <span>用户人设</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleQuickGenerate("xr_persona")}
+            disabled={loading || !prompt.trim()}
+            className="tap py-3 px-3 rounded-xl font-medium text-[13px] flex flex-col items-center justify-center gap-1.5 disabled:opacity-40 glass border-2 border-[var(--border)] hover:border-blue-500/50 transition-all"
+          >
+            <Bot size={16} className="text-blue-400" />
+            <span>角色人设</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleQuickGenerate("world_book")}
+            disabled={loading || !prompt.trim()}
+            className="tap py-3 px-3 rounded-xl font-medium text-[13px] flex flex-col items-center justify-center gap-1.5 disabled:opacity-40 glass border-2 border-[var(--border)] hover:border-amber-500/50 transition-all"
+          >
+            <Compass size={16} className="text-amber-400" />
+            <span>世界书</span>
+          </button>
+        </div>
+
+        {type === "linked_story" && (
+          <button
+            type="submit"
+            disabled={loading || !prompt.trim()}
+            className="tap w-full py-3 px-4 rounded-xl font-semibold text-[14px] flex items-center justify-center gap-2 disabled:opacity-40 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>关联生成中...</span>
+              </>
+            ) : (
+              <>
+                <Link2 size={16} />
+                <span>🔗 关联生成（三位一体）</span>
+              </>
+            )}
+          </button>
         )}
-      </button>
+
+        {loading && (
+          <div className="text-center text-[11px] txt-faint animate-pulse">
+            AI 深度编织中，请稍候...
+          </div>
+        )}
+      </div>
     </form>
   );
 };
