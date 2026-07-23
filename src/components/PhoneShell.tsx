@@ -612,12 +612,12 @@ export function PhoneShell({
           characters={settings.characters}
           onChange={(forumPosts) => updateSettings({ forumPosts })}
           onRefresh={async () => {
-            // AI 自动生成人机帖子和评论
+            // 刷新论坛：生成全新的帖子，替换掉旧的
             const newPosts: any[] = [];
             const boards = ['技术', '日常', '故事', '求助'];
 
-            // 生成 2-4 个新帖子（人机发布）
-            const newPostsCount = Math.floor(Math.random() * 3) + 2;
+            // 生成 8-10 个新帖子（人机发布）
+            const newPostsCount = Math.floor(Math.random() * 3) + 8;
 
             for (let i = 0; i < newPostsCount; i++) {
               const botUser = generateBotUser();
@@ -628,6 +628,38 @@ export function PhoneShell({
                 const raw = await askAI(settings.api, sys, `板块：${board}\n请生成一条真实感强的帖子：`, { temperature: 0.95, maxTokens: 400 });
                 const [title, ...rest] = raw.split('\n');
 
+                // 每个新帖子也带初始评论
+                const initialReplies = [];
+                const replyCount = Math.floor(Math.random() * 8) + 5; // 5-12条评论
+                for (let j = 0; j < replyCount; j++) {
+                  const replyBot = generateBotUser();
+                  const subReplies = [];
+
+                  if (Math.random() > 0.5) {
+                    const subCount = Math.floor(Math.random() * 3) + 1;
+                    for (let k = 0; k < subCount; k++) {
+                      const subBot = generateBotUser();
+                      subReplies.push({
+                        id: uid(),
+                        authorName: subBot.name,
+                        authorAvatar: subBot.avatar,
+                        text: COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)],
+                        replyTo: replyBot.name,
+                        ts: Date.now() - i * 300000 - j * 60000 - k * 30000
+                      });
+                    }
+                  }
+
+                  initialReplies.push({
+                    id: uid(),
+                    authorName: replyBot.name,
+                    authorAvatar: replyBot.avatar,
+                    text: COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)],
+                    ts: Date.now() - i * 300000 - j * 60000,
+                    replies: subReplies.length > 0 ? subReplies : undefined
+                  });
+                }
+
                 newPosts.push({
                   id: uid(),
                   title: title.trim(),
@@ -636,7 +668,7 @@ export function PhoneShell({
                   body: rest.join('\n').trim(),
                   board,
                   views: Math.floor(Math.random() * 500) + 50,
-                  replies: [],
+                  replies: initialReplies,
                   ts: Date.now() - i * 60000 * 5 // 错开5分钟
                 });
               } catch (e) {
@@ -644,54 +676,8 @@ export function PhoneShell({
               }
             }
 
-            // 给现有帖子添加人机评论（前5个帖子）
-            const existingPosts = settings.forumPosts.slice(0, 5);
-            const updatedPosts = settings.forumPosts.map(post => {
-              if (!existingPosts.includes(post)) return post;
-
-              const newRepliesCount = Math.floor(Math.random() * 4) + 2; // 2-5条一级评论
-              const newReplies = [];
-
-              for (let i = 0; i < newRepliesCount; i++) {
-                const botUser = generateBotUser();
-                const text = COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)];
-                const subReplies = [];
-
-                // 40% 概率带楼中楼
-                if (Math.random() > 0.6) {
-                  const subCount = Math.floor(Math.random() * 2) + 1; // 1-2条楼中楼
-                  for (let j = 0; j < subCount; j++) {
-                    const subBot = generateBotUser();
-                    subReplies.push({
-                      id: uid(),
-                      authorName: subBot.name,
-                      authorAvatar: subBot.avatar,
-                      text: COMMENT_TEMPLATES[Math.floor(Math.random() * COMMENT_TEMPLATES.length)],
-                      replyTo: botUser.name,
-                      ts: Date.now() - i * 30000 - j * 15000
-                    });
-                  }
-                }
-
-                newReplies.push({
-                  id: uid(),
-                  authorName: botUser.name,
-                  authorAvatar: botUser.avatar,
-                  text: text,
-                  ts: Date.now() - i * 30000,
-                  replies: subReplies.length > 0 ? subReplies : undefined
-                });
-              }
-
-              return {
-                ...post,
-                replies: [...post.replies, ...newReplies],
-                views: post.views + Math.floor(Math.random() * 50) + 10
-              };
-            });
-
-            // 合并新帖子和更新的帖子
-            updateSettings({ forumPosts: [...newPosts, ...updatedPosts] });
+            // 替换为新帖子（不保留旧帖子，避免越刷越多）
+            updateSettings({ forumPosts: newPosts });
           }}
           onBack={goHome}
         />
