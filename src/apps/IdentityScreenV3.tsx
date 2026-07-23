@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
-import { Camera, Trash2, Star, Users, Download, Upload, Plus } from 'lucide-react';
+import { Camera, Trash2, Star, Users, Download, Upload, Plus, Eye, Edit3 } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { ListGroup, Row, TextField, PrimaryButton } from '../components/ui';
 import { Confirm, Modal } from '../components/Sheet';
 import type { UserIdentity } from '../types';
 import { uid, fileToDataUrl } from '../utils';
+import ReactMarkdown from 'react-markdown';
 
 export function IdentityScreenV3({
   users,
@@ -25,6 +26,7 @@ export function IdentityScreenV3({
   const [confirmDel, setConfirmDel] = useState<UserIdentity | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [showAltAccounts, setShowAltAccounts] = useState<string | null>(null);
+  const [personaPreviewMode, setPersonaPreviewMode] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const exportInputRef = useRef<HTMLInputElement>(null);
 
@@ -429,21 +431,48 @@ function IdentityEditorV3({
           <div className="glass-strong rounded-2xl p-4">
             <div className="text-[13px] font-medium mb-2 txt-accent flex items-center justify-between">
               <span>人设描述 *</span>
-              <span className="text-[11px] txt-faint">
-                {(u.persona || '').length} / 50,000
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPersonaPreviewMode(!personaPreviewMode)}
+                  className="tap flex items-center gap-1 text-[11px] txt-accent"
+                >
+                  {personaPreviewMode ? <><Edit3 size={12} /> 编辑</> : <><Eye size={12} /> 预览</>}
+                </button>
+                <span className="text-[11px] txt-faint">
+                  {(u.persona || '').length} / 50,000
+                </span>
+              </div>
             </div>
             <div className="text-[11px] txt-faint mb-3">
               详细描述你的性格、背景、经历、喜好等。这是AI理解你的基础。
             </div>
-            <textarea
-              value={u.persona || ''}
-              onChange={(e) => setU({ ...u, persona: e.target.value })}
-              placeholder="例如：我是一个25岁的程序员，性格内向但喜欢深度交流。喜欢读科幻小说，最喜欢《三体》。工作是后端开发，擅长Python和Go。平时喜欢听后摇音乐，周末会去爬山..."
-              rows={8}
-              maxLength={50000}
-              className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
-            />
+            {personaPreviewMode ? (
+              <div className="glass rounded-xl px-3 py-2 text-[13px] max-h-[300px] overflow-y-auto">
+                <ReactMarkdown
+                  components={{
+                    h1: ({ children }) => <h1 className="text-[16px] font-bold txt-accent mb-2 mt-3">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-[14px] font-semibold txt-dim mb-1.5 mt-2 pb-1 border-b border-[var(--border)]">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-[13px] font-medium mb-1 mt-2">{children}</h3>,
+                    p: ({ children }) => <p className="mb-2 leading-relaxed">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-0.5">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5">{children}</ol>,
+                    strong: ({ children }) => <strong className="font-semibold txt-accent">{children}</strong>,
+                    em: ({ children }) => <em className="italic txt-faint">{children}</em>,
+                  }}
+                >
+                  {u.persona || '暂无人设描述'}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <textarea
+                value={u.persona || ''}
+                onChange={(e) => setU({ ...u, persona: e.target.value })}
+                placeholder="例如：我是一个25岁的程序员，性格内向但喜欢深度交流。喜欢读科幻小说，最喜欢《三体》。工作是后端开发，擅长Python和Go。平时喜欢听后摇音乐，周末会去爬山..."
+                rows={8}
+                maxLength={50000}
+                className="w-full glass-strong rounded-xl px-3 py-2.5 text-[13px] outline-none resize-none bg-transparent border border-[var(--border)] focus:border-[var(--accent)] transition-colors"
+              />
+            )}
           </div>
 
           {/* 5. AI绘图提示词 */}

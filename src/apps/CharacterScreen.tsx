@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
-import { Camera, Trash2, User, Image, Wand2, Loader2, Upload, FileText, Plus, ChevronUp, ChevronDown, KeyRound, BookMarked } from 'lucide-react';
+import { Camera, Trash2, User, Image, Wand2, Loader2, Upload, FileText, Plus, ChevronUp, ChevronDown, KeyRound, BookMarked, Eye, Edit3 } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { ListGroup, Row, TextField, PrimaryButton } from '../components/ui';
 import { Confirm, Modal } from '../components/Sheet';
 import { uid, fileToDataUrl } from '../utils';
 import { generateImage } from '../api';
 import type { Character, ApiConfig, WorldEntry } from '../types';
+import ReactMarkdown from 'react-markdown';
 
 export function CharacterScreen({
   characters,
@@ -34,6 +35,7 @@ export function CharacterScreen({
   const [isNew, setIsNew] = useState(false);
   const [importing, setImporting] = useState(false);
   const [pastedText, setPastedText] = useState('');
+  const [personaPreviewMode, setPersonaPreviewMode] = useState(false);
   const importFileInputRef = useRef<HTMLInputElement>(null);
 
   // Worldbook States
@@ -588,14 +590,41 @@ function CharacterEditor({
       <TextField label="一句话介绍/签名" value={c.signature} onChange={(v) => setC({ ...c, signature: v })} placeholder="出现在通讯录和群列表的个性签名" />
 
       <label className="block mb-3.5">
-        <div className="text-[12px] txt-dim mb-1 font-medium">人设描述（System Prompt）</div>
-        <textarea
-          value={c.persona}
-          onChange={(e) => setC({ ...c, persona: e.target.value })}
-          placeholder="角色性格、背景、说话风格及与用户的关系。描述越精细对话效果越好。"
-          rows={5}
-          className="w-full glass rounded-xl px-3 py-2 text-[13px] outline-none resize-none bg-transparent placeholder:text-[var(--text-faint)] border border-white/5 focus:border-indigo-500/50"
-        />
+        <div className="text-[12px] txt-dim mb-1 font-medium flex items-center justify-between">
+          <span>人设描述（System Prompt）</span>
+          <button
+            onClick={() => setPersonaPreviewMode(!personaPreviewMode)}
+            className="tap flex items-center gap-1 text-[11px] txt-accent"
+          >
+            {personaPreviewMode ? <><Edit3 size={12} /> 编辑</> : <><Eye size={12} /> 预览</>}
+          </button>
+        </div>
+        {personaPreviewMode ? (
+          <div className="glass rounded-xl px-3 py-2 text-[13px] max-h-[300px] overflow-y-auto">
+            <ReactMarkdown
+              components={{
+                h1: ({ children }) => <h1 className="text-[16px] font-bold txt-accent mb-2 mt-3">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-[14px] font-semibold txt-dim mb-1.5 mt-2 pb-1 border-b border-[var(--border)]">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-[13px] font-medium mb-1 mt-2">{children}</h3>,
+                p: ({ children }) => <p className="mb-2 leading-relaxed">{children}</p>,
+                ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-0.5">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5">{children}</ol>,
+                strong: ({ children }) => <strong className="font-semibold txt-accent">{children}</strong>,
+                em: ({ children }) => <em className="italic txt-faint">{children}</em>,
+              }}
+            >
+              {c.persona || '暂无人设描述'}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <textarea
+            value={c.persona}
+            onChange={(e) => setC({ ...c, persona: e.target.value })}
+            placeholder="角色性格、背景、说话风格及与用户的关系。描述越精细对话效果越好。"
+            rows={5}
+            className="w-full glass rounded-xl px-3 py-2 text-[13px] outline-none resize-none bg-transparent placeholder:text-[var(--text-faint)] border border-white/5 focus:border-indigo-500/50"
+          />
+        )}
       </label>
 
       <label className="block mb-3.5">
