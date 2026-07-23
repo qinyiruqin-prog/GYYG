@@ -117,7 +117,7 @@ export function MeApp({
       />
     );
   if (sub === 'data')
-    return <DataScreen state={state} onImport={onImport} onBack={() => setSub(null)} />;
+    return <DataScreen state={state} onImport={onImport} updateSettings={updateSettings} onBack={() => setSub(null)} />;
   if (sub === 'characters')
     return (
       <CharacterScreen

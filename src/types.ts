@@ -786,6 +786,11 @@ export interface AppSettings {
   autoRefreshInterval?: number; // 自动刷新间隔（秒），默认300（5分钟）
   lastAutoRefreshTime?: number; // 上次自动刷新时间
   manualRefreshEnabled?: boolean; // 是否允许手动刷新（始终为true）
+
+  // 自动备份系统
+  autoBackupEnabled?: boolean; // 是否开启自动备份
+  autoBackupFrequency?: 1 | 5 | 15 | 30; // 备份频率（天）：1天、5天、15天（半个月）、30天（一个月）
+  lastAutoBackupTime?: number; // 上次自动备份时间
 }
 
 export interface InstalledWebApp {
