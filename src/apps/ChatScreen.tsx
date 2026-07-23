@@ -2234,8 +2234,17 @@ ${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子�
                   max="10"
                   value={thread.minReplyCount || 1}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value) || 1;
-                    onUpdateThread((t) => ({ ...t, minReplyCount: Math.max(1, Math.min(10, val)) }));
+                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    if (val === '') {
+                      onUpdateThread((t) => ({ ...t, minReplyCount: undefined }));
+                    } else if (!isNaN(val as number)) {
+                      onUpdateThread((t) => ({ ...t, minReplyCount: Math.max(1, Math.min(10, val as number)) }));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      onUpdateThread((t) => ({ ...t, minReplyCount: 1 }));
+                    }
                   }}
                   className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
                 />
@@ -2248,8 +2257,17 @@ ${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子�
                   max="20"
                   value={thread.maxReplyCount || 1}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value) || 1;
-                    onUpdateThread((t) => ({ ...t, maxReplyCount: Math.max(1, Math.min(20, val)) }));
+                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    if (val === '') {
+                      onUpdateThread((t) => ({ ...t, maxReplyCount: undefined }));
+                    } else if (!isNaN(val as number)) {
+                      onUpdateThread((t) => ({ ...t, maxReplyCount: Math.max(1, Math.min(20, val as number)) }));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      onUpdateThread((t) => ({ ...t, maxReplyCount: 1 }));
+                    }
                   }}
                   className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
                 />
@@ -2272,8 +2290,17 @@ ${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子�
                   max="500"
                   value={thread.minWordCount || 50}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value) || 50;
-                    onUpdateThread((t) => ({ ...t, minWordCount: Math.max(10, Math.min(500, val)) }));
+                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    if (val === '') {
+                      onUpdateThread((t) => ({ ...t, minWordCount: undefined }));
+                    } else if (!isNaN(val as number)) {
+                      onUpdateThread((t) => ({ ...t, minWordCount: Math.max(10, Math.min(500, val as number)) }));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      onUpdateThread((t) => ({ ...t, minWordCount: 50 }));
+                    }
                   }}
                   className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
                 />
@@ -2286,8 +2313,17 @@ ${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子�
                   max="2000"
                   value={thread.maxWordCount || 120}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value) || 120;
-                    onUpdateThread((t) => ({ ...t, maxWordCount: Math.max(20, Math.min(2000, val)) }));
+                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    if (val === '') {
+                      onUpdateThread((t) => ({ ...t, maxWordCount: undefined }));
+                    } else if (!isNaN(val as number)) {
+                      onUpdateThread((t) => ({ ...t, maxWordCount: Math.max(20, Math.min(2000, val as number)) }));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value === '') {
+                      onUpdateThread((t) => ({ ...t, maxWordCount: 120 }));
+                    }
                   }}
                   className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
                 />
