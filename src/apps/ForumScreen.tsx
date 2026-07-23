@@ -115,13 +115,32 @@ export function ForumScreen({
               ))}
             </div>
           </div>
-          <div className="px-3 py-2 border-t border-[var(--border)] flex items-center gap-2 shrink-0">
-            <input value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && reply(p)} placeholder="回复…" className="flex-1 glass rounded-full px-4 h-10 text-[14px] outline-none bg-transparent" />
-            <button onClick={() => aiReply(p)} disabled={aiWriting} className="tap w-10 h-10 rounded-full glass flex items-center justify-center disabled:opacity-50"><Sparkles size={18} className="txt-accent" /></button>
-            <button onClick={() => reply(p)} disabled={!replyText.trim()} className="tap w-10 h-10 rounded-full flex items-center justify-center text-[var(--bg)] disabled:opacity-40" style={{ background: 'var(--accent)' }}><Send size={18} /></button>
+          <div className="px-3 py-2 border-t border-[var(--border)] shrink-0">
+            {/* 角色选择器 */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px] txt-faint">回复身份：</span>
+              <select
+                value={selectedAuthor?.id || ''}
+                onChange={(e) => {
+                  const char = characters.find(c => c.id === e.target.value);
+                  if (char) setSelectedAuthor({ id: char.id, name: char.name, avatar: char.avatar });
+                  else if (me && e.target.value === me.id) setSelectedAuthor({ id: me.id, name: me.nickname, avatar: me.avatar });
+                }}
+                className="text-[12px] glass rounded-lg px-2 py-1 outline-none bg-transparent"
+              >
+                {me && <option value={me.id}>{me.nickname} (我)</option>}
+                {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            {/* 回复输入框 */}
+            <div className="flex items-center gap-2">
+              <input value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && reply(p)} placeholder="回复…" className="flex-1 glass rounded-full px-4 h-10 text-[14px] outline-none bg-transparent" />
+              <button onClick={() => aiReply(p)} disabled={aiWriting} className="tap w-10 h-10 rounded-full glass flex items-center justify-center disabled:opacity-50"><Sparkles size={18} className="txt-accent" /></button>
+              <button onClick={() => reply(p)} disabled={!replyText.trim()} className="tap w-10 h-10 rounded-full flex items-center justify-center text-[var(--bg)] disabled:opacity-40" style={{ background: 'var(--accent)' }}><Send size={18} /></button>
+            </div>
           </div>
         </div>
-        {aiWriting && <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-50 glass-strong rounded-full px-4 py-2 text-[12px] animate-sheet-up">AI 生成中…</div>}
+        {aiWriting && <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50 glass-strong rounded-full px-4 py-2 text-[12px] animate-sheet-up">AI 生成中…</div>}
       </AppScreen>
     );
   }
