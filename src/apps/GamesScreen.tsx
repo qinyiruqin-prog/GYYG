@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { AppScreen } from '../components/AppScreen';
-import type { Character } from '../types';
+import { GamePlayScreen } from './GamePlayScreen';
+import type { Character, ApiConfig, Message } from '../types';
 
 interface GamesScreenProps {
+  api: ApiConfig;
   characters: Character[];
   onBack: () => void;
-  onStartGame: (gameId: string, characterId: string) => void;
+  onSaveGameToChat: (characterId: string, messages: Message[]) => void;
 }
 
 export interface MiniGame {
@@ -68,11 +70,13 @@ const games: MiniGame[] = [
   },
 ];
 
-export function GamesScreen({ characters, onBack, onStartGame }: GamesScreenProps) {
+export function GamesScreen({ api, characters, onBack, onSaveGameToChat }: GamesScreenProps) {
   const [selectedGameId, setSelectedGameId] = useState<string>('');
   const [selectedCharId, setSelectedCharId] = useState<string>('');
+  const [playing, setPlaying] = useState(false);
 
   const selectedGame = games.find(g => g.id === selectedGameId);
+  const selectedChar = characters.find(c => c.id === selectedCharId);
 
   const difficultyLabels = {
     easy: '简单',
@@ -98,8 +102,31 @@ export function GamesScreen({ characters, onBack, onStartGame }: GamesScreenProp
       alert('请选择游戏和角色');
       return;
     }
-    onStartGame(selectedGameId, selectedCharId);
+    setPlaying(true);
   };
+
+  const handleGameFinish = (messages: Message[]) => {
+    if (selectedCharId) {
+      onSaveGameToChat(selectedCharId, messages);
+      setPlaying(false);
+      setSelectedGameId('');
+      setSelectedCharId('');
+      onBack();
+    }
+  };
+
+  // 如果正在游戏中，显示游戏界面
+  if (playing && selectedGameId && selectedChar) {
+    return (
+      <GamePlayScreen
+        gameId={selectedGameId}
+        character={selectedChar}
+        api={api}
+        onBack={() => setPlaying(false)}
+        onFinish={handleGameFinish}
+      />
+    );
+  }
 
   return (
     <AppScreen title="游戏中心" onBack={onBack}>

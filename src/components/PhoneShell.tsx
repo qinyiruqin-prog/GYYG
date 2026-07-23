@@ -1118,7 +1118,43 @@ export function PhoneShell({
         />
       );
     if (open === 'turtle_soup') return <TurtleSoupScreen onBack={goHome} />;
-    if (open === 'games') return <GamesScreen onBack={goHome} />;
+    if (open === 'games')
+      return (
+        <GamesScreen
+          api={settings.api}
+          characters={settings.characters}
+          onBack={goHome}
+          onSaveGameToChat={(characterId, messages) => {
+            // 找到或创建聊天会话
+            const activeUser = settings.users.find((u) => u.id === settings.activeUserId) ?? settings.users[0];
+            let threads = settings.chatThreads.filter(
+              (t: any) => t.userId === activeUser.id && t.characterId === characterId && !t.charAltName
+            );
+            let thread = threads[0];
+
+            if (!thread) {
+              const newThreadId = 'game-thread-' + Math.random().toString(36).substring(2);
+              thread = {
+                id: newThreadId,
+                characterId,
+                userId: activeUser.id,
+                messages: [],
+                updatedAt: Date.now(),
+                sharedMemory: [],
+              };
+              updateSettings({ chatThreads: [thread, ...settings.chatThreads] });
+            }
+
+            // 添加游戏消息到聊天记录
+            const updatedThreads = settings.chatThreads.map((t: any) =>
+              t.id === thread.id
+                ? { ...t, messages: [...t.messages, ...messages], updatedAt: Date.now() }
+                : t
+            );
+            updateSettings({ chatThreads: updatedThreads });
+          }}
+        />
+      );
     if (open === 'weibo')
       return (
         <WeiboScreen
