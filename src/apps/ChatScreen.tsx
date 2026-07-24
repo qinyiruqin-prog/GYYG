@@ -1248,25 +1248,37 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
       isTypingCheckInterval.current = null;
     }
 
-    // 启动输入检测：每500ms检查一次用户是否还在输入
-    const startTypingCheck = () => {
-      isTypingCheckInterval.current = setInterval(() => {
-        const now = Date.now();
-        const timeSinceLastInput = now - lastInputTimeRef.current;
+    // 记录用户发送消息的时间
+    const sendTime = Date.now();
 
-        // 如果用户已经停止输入超过1.5秒，触发AI回复
-        if (timeSinceLastInput > 1500) {
-          // 清除检查定时器
-          if (isTypingCheckInterval.current) {
-            clearInterval(isTypingCheckInterval.current);
-            isTypingCheckInterval.current = null;
-          }
+    // 启动输入检测：每300ms检查一次用户是否开始输入下一条
+    isTypingCheckInterval.current = setInterval(() => {
+      const now = Date.now();
+      const timeSinceSend = now - sendTime;
 
-          // 触发AI回复
-          triggerAIReply();
+      // 如果用户开始输入新内容，说明还要继续发消息
+      if (input.trim().length > 0) {
+        // 用户正在输入新消息，重置发送时间
+        // 清除当前检测，等待下次发送
+        if (isTypingCheckInterval.current) {
+          clearInterval(isTypingCheckInterval.current);
+          isTypingCheckInterval.current = null;
         }
-      }, 500); // 每500ms检查一次
-    };
+        return;
+      }
+
+      // 如果用户发送后超过2秒还没开始输入新内容，触发AI回复
+      if (timeSinceSend > 2000) {
+        // 清除检查定时器
+        if (isTypingCheckInterval.current) {
+          clearInterval(isTypingCheckInterval.current);
+          isTypingCheckInterval.current = null;
+        }
+
+        // 触发AI回复
+        triggerAIReply();
+      }
+    }, 300); // 每300ms检查一次
 
     const triggerAIReply = async () => {
       setLoading(true);
@@ -1404,15 +1416,6 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
         setThinkingMsg(null);
       }
     };
-
-    // 检查输入框内容，如果为空则立即触发回复
-    if (input.trim() === '') {
-      // 用户刚发送完消息，输入框已清空，立即开始检测
-      startTypingCheck();
-    } else {
-      // 如果输入框还有内容（理论上不应该发生），也开始检测
-      startTypingCheck();
-    }
   };
 
   const sendActive = async (directive: string, localUserActionText?: string) => {
