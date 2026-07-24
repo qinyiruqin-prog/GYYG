@@ -1,8 +1,7 @@
-const CACHE_VERSION = 'yangyangji-v2.1-20260724';
-const RUNTIME_CACHE = 'yangyangji-runtime-v2.1';
+const CACHE_VERSION = 'yangyangji-v2.2-20260724';
+const RUNTIME_CACHE = 'yangyangji-runtime-v2.2';
 const ASSETS = [
-  '/',
-  '/index.html',
+  // 不缓存 index.html，确保每次都获取最新版本
   '/manifest.json',
   '/icon.svg'
 ];
