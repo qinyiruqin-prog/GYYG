@@ -413,6 +413,7 @@ export interface SquarePost {
   authorAvatar?: string;
   text: string;
   image?: string;
+  imageDescription?: string; // 图片描述文字（当没有API时显示）
   likes: number;
   comments: { id: ID; authorName: string; text: string; ts: number }[];
   ts: number;
