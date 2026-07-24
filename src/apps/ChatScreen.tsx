@@ -1212,11 +1212,19 @@ function ChatConversation({
       sys += '\n\n[你应该知道的事]\n' + unconsumed.map((e) => `${e.sourceCharName}那里发生的事：${e.summary}`).join('\n');
     }
 
-    // 回复设置
-    const minReplyCount = thread.minReplyCount || 1;
-    const maxReplyCount = thread.maxReplyCount || 1;
-    const minWords = thread.minWordCount || 50;
-    const maxWords = thread.maxWordCount || 120;
+    // 回复设置 - 根据当前模式选择对应设置
+    const minReplyCount = currentMode === 'offline'
+      ? (thread.offlineMinReplyCount || 1)
+      : (thread.minReplyCount || 1);
+    const maxReplyCount = currentMode === 'offline'
+      ? (thread.offlineMaxReplyCount || 3)
+      : (thread.maxReplyCount || 1);
+    const minWords = currentMode === 'offline'
+      ? (thread.offlineMinWordCount || 80)
+      : (thread.minWordCount || 50);
+    const maxWords = currentMode === 'offline'
+      ? (thread.offlineMaxWordCount || 200)
+      : (thread.maxWordCount || 120);
 
     sys += `\n\n[回复要求]
 你需要回复 ${minReplyCount} 到 ${maxReplyCount} 条消息（根据对话内容自然决定具体条数）。
@@ -2399,102 +2407,146 @@ ${cameraEnabled ? '用户的摄像头已开启，你可以看到用户的样子�
 
           {/* 回复条数设置 */}
           <div>
-            <label className="text-[13px] txt-dim block mb-2 font-medium">角色每次回复条数范围</label>
+            <label className="text-[13px] txt-dim block mb-2 font-medium">
+              角色每次回复条数范围 {currentMode === 'offline' && <span className="text-[11px] txt-faint">(线下模式)</span>}
+            </label>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] txt-faint block mb-1">最少回复条数</label>
                 <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={thread.minReplyCount ?? ''}
+                  type="text"
+                  inputMode="numeric"
+                  value={currentMode === 'offline' ? (thread.offlineMinReplyCount ?? '') : (thread.minReplyCount ?? '')}
                   onChange={(e) => {
-                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    const val = e.target.value.trim();
                     if (val === '') {
-                      onUpdateThread((t) => ({ ...t, minReplyCount: undefined }));
-                    } else if (!isNaN(val as number)) {
-                      onUpdateThread((t) => ({ ...t, minReplyCount: Math.max(1, Math.min(10, val as number)) }));
+                      if (currentMode === 'offline') {
+                        onUpdateThread((t) => ({ ...t, offlineMinReplyCount: undefined }));
+                      } else {
+                        onUpdateThread((t) => ({ ...t, minReplyCount: undefined }));
+                      }
+                    } else {
+                      const num = parseInt(val);
+                      if (!isNaN(num) && num >= 1 && num <= 10) {
+                        if (currentMode === 'offline') {
+                          onUpdateThread((t) => ({ ...t, offlineMinReplyCount: num }));
+                        } else {
+                          onUpdateThread((t) => ({ ...t, minReplyCount: num }));
+                        }
+                      }
                     }
                   }}
-                  placeholder="1"
+                  placeholder={currentMode === 'offline' ? '1' : '1'}
                   className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
                 />
               </div>
               <div>
                 <label className="text-[11px] txt-faint block mb-1">最多回复条数</label>
                 <input
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={thread.maxReplyCount ?? ''}
+                  type="text"
+                  inputMode="numeric"
+                  value={currentMode === 'offline' ? (thread.offlineMaxReplyCount ?? '') : (thread.maxReplyCount ?? '')}
                   onChange={(e) => {
-                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    const val = e.target.value.trim();
                     if (val === '') {
-                      onUpdateThread((t) => ({ ...t, maxReplyCount: undefined }));
-                    } else if (!isNaN(val as number)) {
-                      onUpdateThread((t) => ({ ...t, maxReplyCount: Math.max(1, Math.min(20, val as number)) }));
+                      if (currentMode === 'offline') {
+                        onUpdateThread((t) => ({ ...t, offlineMaxReplyCount: undefined }));
+                      } else {
+                        onUpdateThread((t) => ({ ...t, maxReplyCount: undefined }));
+                      }
+                    } else {
+                      const num = parseInt(val);
+                      if (!isNaN(num) && num >= 1 && num <= 20) {
+                        if (currentMode === 'offline') {
+                          onUpdateThread((t) => ({ ...t, offlineMaxReplyCount: num }));
+                        } else {
+                          onUpdateThread((t) => ({ ...t, maxReplyCount: num }));
+                        }
+                      }
                     }
                   }}
-                  placeholder="1"
+                  placeholder={currentMode === 'offline' ? '3' : '1'}
                   className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
                 />
               </div>
             </div>
             <div className="text-[11px] txt-faint mt-1.5">
-              当前设置：每次回复 {thread.minReplyCount || 1} - {thread.maxReplyCount || 1} 条消息
+              当前设置：每次回复 {currentMode === 'offline' ? (thread.offlineMinReplyCount || 1) : (thread.minReplyCount || 1)} - {currentMode === 'offline' ? (thread.offlineMaxReplyCount || 3) : (thread.maxReplyCount || 1)} 条消息
             </div>
           </div>
 
           {/* 字数范围设置 */}
           <div>
-            <label className="text-[13px] txt-dim block mb-2 font-medium">每条消息字数范围</label>
+            <label className="text-[13px] txt-dim block mb-2 font-medium">
+              每条消息字数范围 {currentMode === 'offline' && <span className="text-[11px] txt-faint">(线下模式)</span>}
+            </label>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] txt-faint block mb-1">最少字数</label>
                 <input
-                  type="number"
-                  min="10"
-                  max="500"
-                  value={thread.minWordCount ?? ''}
+                  type="text"
+                  inputMode="numeric"
+                  value={currentMode === 'offline' ? (thread.offlineMinWordCount ?? '') : (thread.minWordCount ?? '')}
                   onChange={(e) => {
-                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    const val = e.target.value.trim();
                     if (val === '') {
-                      onUpdateThread((t) => ({ ...t, minWordCount: undefined }));
-                    } else if (!isNaN(val as number)) {
-                      onUpdateThread((t) => ({ ...t, minWordCount: Math.max(10, Math.min(500, val as number)) }));
+                      if (currentMode === 'offline') {
+                        onUpdateThread((t) => ({ ...t, offlineMinWordCount: undefined }));
+                      } else {
+                        onUpdateThread((t) => ({ ...t, minWordCount: undefined }));
+                      }
+                    } else {
+                      const num = parseInt(val);
+                      if (!isNaN(num) && num >= 10 && num <= 500) {
+                        if (currentMode === 'offline') {
+                          onUpdateThread((t) => ({ ...t, offlineMinWordCount: num }));
+                        } else {
+                          onUpdateThread((t) => ({ ...t, minWordCount: num }));
+                        }
+                      }
                     }
                   }}
-                  placeholder="50"
+                  placeholder={currentMode === 'offline' ? '80' : '50'}
                   className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
                 />
               </div>
               <div>
                 <label className="text-[11px] txt-faint block mb-1">最多字数</label>
                 <input
-                  type="number"
-                  min="20"
-                  max="2000"
-                  value={thread.maxWordCount ?? ''}
+                  type="text"
+                  inputMode="numeric"
+                  value={currentMode === 'offline' ? (thread.offlineMaxWordCount ?? '') : (thread.maxWordCount ?? '')}
                   onChange={(e) => {
-                    const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                    const val = e.target.value.trim();
                     if (val === '') {
-                      onUpdateThread((t) => ({ ...t, maxWordCount: undefined }));
-                    } else if (!isNaN(val as number)) {
-                      onUpdateThread((t) => ({ ...t, maxWordCount: Math.max(20, Math.min(2000, val as number)) }));
+                      if (currentMode === 'offline') {
+                        onUpdateThread((t) => ({ ...t, offlineMaxWordCount: undefined }));
+                      } else {
+                        onUpdateThread((t) => ({ ...t, maxWordCount: undefined }));
+                      }
+                    } else {
+                      const num = parseInt(val);
+                      if (!isNaN(num) && num >= 20 && num <= 2000) {
+                        if (currentMode === 'offline') {
+                          onUpdateThread((t) => ({ ...t, offlineMaxWordCount: num }));
+                        } else {
+                          onUpdateThread((t) => ({ ...t, maxWordCount: num }));
+                        }
+                      }
                     }
                   }}
-                  placeholder="120"
+                  placeholder={currentMode === 'offline' ? '200' : '120'}
                   className="w-full glass rounded-xl px-3 h-9 text-[13px] outline-none bg-transparent"
                 />
               </div>
             </div>
             <div className="text-[11px] txt-faint mt-1.5">
-              当前设置：每条消息 {thread.minWordCount || 50} - {thread.maxWordCount || 120} 字
+              当前设置：每条消息 {currentMode === 'offline' ? (thread.offlineMinWordCount || 80) : (thread.minWordCount || 50)} - {currentMode === 'offline' ? (thread.offlineMaxWordCount || 200) : (thread.maxWordCount || 120)} 字
             </div>
           </div>
 
           <div className="text-[11px] txt-faint">
-            💡 提示：线上/线下模式的记忆是互通的，切换模式不会丢失聊天记录。
+            💡 提示：线上/线下模式的记忆是互通的，切换模式不会丢失聊天记录。各模式的回复设置独立保存。
           </div>
         </div>
       </Modal>
