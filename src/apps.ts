@@ -43,7 +43,7 @@ export const APPS: AppMeta[] = [
   { id: 'anniversary',    name: '纪念日',     icon: 'Gift',           available: true, emoji: '🎁' },
   { id: 'group_chat',     name: '群聊',       icon: 'Users',          available: false, emoji: '👥' },
   { id: 'phone_check',    name: '查手机',     icon: 'Search',         available: true, emoji: '🔍' },
-  { id: 'offline_mode',   name: '线下模式',   icon: 'MapPin',         available: false, emoji: '📍' },
+  // 已删除：线下模式（已废弃，功能整合到聊天界面中）
   { id: 'couple_space',   name: '情侣空间',   icon: 'Heart',          available: true, emoji: '💑' },
   { id: 'home_system',    name: '家园',       icon: 'Home',           available: true, emoji: '🏠' },
   { id: 'kitchen',        name: '厨房',       icon: 'ChefHat',        available: true, emoji: '👨‍🍳' },
