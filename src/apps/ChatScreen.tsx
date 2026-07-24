@@ -1280,11 +1280,22 @@ function ChatConversation({
 - 主动发起语音通话（当你想听到对方声音、或者打字不方便时）
 - 主动发送照片/自拍（分享你的日常瞬间）
 - 主动发送语音消息（表达语气和情感）
-- 主动发朋友圈、发短信、发邮件
-- 主动发红包/转账（表达心意）
+- 主动发短信（当你想联系对方但不想打扰，或者有紧急事情时）
+- 主动发邮件（当你有正式的事情要通知、或者写长文表达心意时）
+- 主动开小号试探（当你想匿名测试对方反应、试探对方态度、或者恶作剧时）
+- 主动发朋友圈、发红包/转账（表达心意）
 
-请根据对话情境和你的情绪状态，自然地选择合适的互动方式。不要总是只用文字回复，要像真人一样多样化地互动。
-当你想打视频或语音时，请在回复中表达"我想给你打个视频/语音"之类的意图，系统会自动触发通话。`;
+特殊能力：
+- 如果你是病娇/占有欲强的人设，可以连续发多条消息轰炸对方
+- 如果你是高冷/傲娇的人设，应该克制使用主动互动
+
+触发方式（在回复中自然表达意图）：
+- 视频/语音："我想给你打个视频/语音"
+- 短信："我给你发条短信"、"我发个短信给你"
+- 邮件："我给你发封邮件"、"我写封邮件给你"
+- 小号："我开个小号试探你"、"我用小号加你"
+
+请根据对话情境、你的人设和情绪状态，自然地选择合适的互动方式。不要总是只用文字回复，要像真人一样多样化地互动。`;
     }
 
     sys += `\n\n[回复要求]
@@ -1426,14 +1437,23 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
           }
         }
 
-        // 自动挡模式：检测是否要主动打视频或语音
+        // 自动挡模式：检测主动互动意图
         if (activeInteractEnabled !== false && activeInteractMode === 'auto') {
           const content = assistantMsg.content.toLowerCase();
+
+          // 视频通话意图
           const hasVideoIntent = content.includes('视频') || content.includes('video') || content.includes('看你') || content.includes('见你');
+          // 语音通话意图
           const hasVoiceIntent = content.includes('语音') || content.includes('打电话') || content.includes('给你打') || content.includes('voice call');
+          // 短信意图
+          const hasSmsIntent = (content.includes('短信') || content.includes('发条消息')) && (content.includes('发') || content.includes('给你'));
+          // 邮件意图
+          const hasEmailIntent = (content.includes('邮件') || content.includes('邮箱') || content.includes('email')) && (content.includes('发') || content.includes('写') || content.includes('给你'));
+          // 小号试探意图
+          const hasAltIntent = (content.includes('小号') || content.includes('匿名')) && (content.includes('试探') || content.includes('加你') || content.includes('开个'));
 
           if (hasVideoIntent && (content.includes('想') || content.includes('要') || content.includes('给你打') || content.includes('打个'))) {
-            // 延迟1-2秒后触发视频通话，让用户看到消息
+            // 延迟1-2秒后触发视频通话
             setTimeout(() => {
               setInCall(true);
               setCallStartTime(Date.now());
@@ -1443,6 +1463,25 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
             setTimeout(() => {
               setInCall(true);
               setCallStartTime(Date.now());
+            }, 1000 + Math.random() * 1000);
+          } else if (hasSmsIntent) {
+            // 触发发短信功能
+            setTimeout(() => {
+              // 模拟点击短信按钮的逻辑（通过触发相应的功能）
+              console.log('AI想发短信:', assistantMsg.content);
+              // TODO: 这里需要调用发短信的函数
+            }, 1000 + Math.random() * 1000);
+          } else if (hasEmailIntent) {
+            // 触发发邮件功能
+            setTimeout(() => {
+              console.log('AI想发邮件:', assistantMsg.content);
+              // TODO: 这里需要调用发邮件的函数
+            }, 1000 + Math.random() * 1000);
+          } else if (hasAltIntent) {
+            // 触发小号试探功能
+            setTimeout(() => {
+              console.log('AI想开小号试探:', assistantMsg.content);
+              // TODO: 这里需要调用小号试探的函数
             }, 1000 + Math.random() * 1000);
           }
         }
