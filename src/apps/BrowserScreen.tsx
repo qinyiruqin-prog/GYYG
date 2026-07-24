@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Search, RefreshCw, ArrowLeft, ArrowRight, Home, Globe, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
-import { askAIJson, askAI } from '../api';
+import { askAIJson } from '../api';
 import type { ApiConfig } from '../types';
 
 interface SimulatedPage {
   title: string;
   header: string;
   content: Array<{
-    type: 'text' | 'image' | 'link' | 'comment';
+    type: 'text' | 'link';
     data: any;
   }>;
 }
@@ -31,29 +31,20 @@ const BOOKMARKS = [
 
 export function BrowserScreen({
   api,
-  initialUrl,
   onBack,
 }: {
   api: ApiConfig;
-  settings?: any;
-  updateSettings?: any;
   initialUrl?: string;
   onBack: () => void;
 }) {
-  const [url, setUrl] = useState(initialUrl || '');
-  const [currentUrl, setCurrentUrl] = useState(initialUrl || '');
+  const [url, setUrl] = useState('');
+  const [currentUrl, setCurrentUrl] = useState('');
   const [pageData, setPageData] = useState<SimulatedPage | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<string[]>(initialUrl ? [initialUrl] : []);
-  const [historyIndex, setHistoryIndex] = useState(initialUrl ? 0 : -1);
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
   const [showComments, setShowComments] = useState(false);
-
-  useEffect(() => {
-    if (initialUrl) {
-      navigateTo(initialUrl);
-    }
-  }, [initialUrl]);
 
   const navigateTo = async (targetUrl: string, addToHistory = true) => {
     let cleanUrl = targetUrl.trim();
@@ -69,7 +60,6 @@ export function BrowserScreen({
     setPageData(null);
     setShowComments(false);
 
-    // 更新历史记录
     if (addToHistory) {
       const nextHistory = history.slice(0, historyIndex + 1);
       nextHistory.push(cleanUrl);
@@ -77,7 +67,6 @@ export function BrowserScreen({
       setHistoryIndex(nextHistory.length - 1);
     }
 
-    // 使用AI生成真实的网页内容
     try {
       const prompt = `请模拟这个网址的内容：${cleanUrl}
 
@@ -96,7 +85,6 @@ export function BrowserScreen({
 
       const result = await askAIJson<any>(api, '你是网页内容生成助手', prompt, { temperature: 0.8 });
 
-      // 转换为页面数据
       const content: any[] = [];
       result.paragraphs?.forEach((p: string) => {
         content.push({ type: 'text', data: p });
@@ -111,7 +99,6 @@ export function BrowserScreen({
         content,
       });
 
-      // 生成评论
       await generateComments(result.title);
     } catch (err) {
       console.error('Failed to generate page:', err);
@@ -183,79 +170,74 @@ export function BrowserScreen({
 
   return (
     <AppScreen title="浏览器" onBack={onBack} noPad>
-      <div className="flex flex-col h-full bg-white text-gray-900">
-        {/* 浏览器顶部导航栏 - 白色主题 */}
-        <div className="p-3 bg-white border-b border-gray-200 space-y-2.5 shrink-0">
-          <div className="flex items-center gap-2">
-            {/* 导航按钮 */}
+      <div className="flex flex-col h-full bg-white">
+        {/* Chrome风格顶栏 */}
+        <div className="px-3 pt-3 pb-2 bg-white border-b border-gray-200 shrink-0">
+          <div className="flex items-center gap-2 mb-2">
+            {/* 导航按钮 - Chrome风格 */}
             <button
               onClick={handleGoBack}
               disabled={historyIndex <= 0}
-              className="tap p-1.5 rounded-lg text-gray-600 disabled:text-gray-300 hover:bg-gray-100"
+              className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
             >
-              <ArrowLeft size={16} />
+              <ArrowLeft size={18} className="text-gray-700" />
             </button>
             <button
               onClick={handleGoForward}
               disabled={historyIndex >= history.length - 1}
-              className="tap p-1.5 rounded-lg text-gray-600 disabled:text-gray-300 hover:bg-gray-100"
+              className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
             >
-              <ArrowRight size={16} />
+              <ArrowRight size={18} className="text-gray-700" />
+            </button>
+            <button
+              onClick={handleRefresh}
+              className={`p-2 rounded-full hover:bg-gray-100 transition-colors ${loading ? 'animate-spin' : ''}`}
+            >
+              <RefreshCw size={18} className="text-gray-700" />
             </button>
             <button
               onClick={handleGoHome}
-              className="tap p-1.5 rounded-lg text-gray-600 hover:bg-gray-100"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
-              <Home size={16} />
+              <Home size={18} className="text-gray-700" />
             </button>
 
-            {/* 地址栏 - 圆角白色 */}
-            <div className="flex-1 flex items-center gap-1.5 bg-gray-100 rounded-full px-4 h-9 border border-gray-200 focus-within:bg-white focus-within:border-blue-500">
-              <Globe size={14} className="text-gray-500" />
+            {/* Chrome风格地址栏 */}
+            <div className="flex-1 flex items-center gap-2 bg-gray-100 hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-300 rounded-full px-4 h-10 transition-all">
+              <Globe size={16} className="text-gray-500" />
               <input
                 type="text"
                 placeholder="搜索或输入网址"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && navigateTo(url)}
-                className="flex-1 bg-transparent outline-none text-[13px] text-gray-900 placeholder-gray-500 min-w-0"
+                className="flex-1 bg-transparent outline-none text-sm text-gray-900 placeholder-gray-500"
               />
-
-              {currentUrl && (
-                <button
-                  onClick={handleRefresh}
-                  className={`tap p-1 text-gray-600 hover:text-blue-600 ${loading ? 'animate-spin' : ''}`}
-                >
-                  <RefreshCw size={14} />
-                </button>
-              )}
             </div>
           </div>
         </div>
 
-        {/* 浏览器内容区域 - 白色背景 */}
-        <div className="flex-1 overflow-y-auto no-scrollbar bg-white">
+        {/* 内容区 */}
+        <div className="flex-1 overflow-y-auto bg-white">
           {loading ? (
-            /* 加载状态 */
-            <div className="flex flex-col items-center justify-center h-64 space-y-3">
-              <div className="w-12 h-12 rounded-full border-3 border-gray-200 border-t-blue-500 animate-spin" />
-              <span className="text-sm text-gray-500 font-medium">正在加载...</span>
+            <div className="flex flex-col items-center justify-center h-64">
+              <div className="w-12 h-12 rounded-full border-4 border-gray-200 border-t-blue-500 animate-spin" />
+              <p className="mt-4 text-sm text-gray-500">正在加载...</p>
             </div>
           ) : currentUrl && pageData ? (
-            /* 网页内容 - 白色卡片风格 */}
-            <div className="max-w-3xl mx-auto p-4 space-y-6">
-              {/* 网页头部 */}
-              <div className="space-y-2 pb-4 border-b border-gray-200">
-                <div className="text-xs text-gray-500">{pageData.header}</div>
+            <div className="max-w-3xl mx-auto p-5 space-y-6">
+              {/* 页面头部 */}
+              <div className="border-b border-gray-200 pb-4">
+                <div className="text-xs text-gray-500 mb-1">{pageData.header}</div>
                 <h1 className="text-2xl font-bold text-gray-900">{pageData.title}</h1>
               </div>
 
-              {/* 网页内容 */}
+              {/* 页面内容 */}
               <div className="space-y-4">
                 {pageData.content.map((item, idx) => {
                   if (item.type === 'text') {
                     return (
-                      <p key={idx} className="text-[15px] text-gray-700 leading-relaxed">
+                      <p key={idx} className="text-base text-gray-800 leading-relaxed">
                         {item.data}
                       </p>
                     );
@@ -265,9 +247,11 @@ export function BrowserScreen({
                       <button
                         key={idx}
                         onClick={() => navigateTo(item.data.url)}
-                        className="block w-full text-left p-4 bg-blue-50 hover:bg-blue-100 rounded-xl tap text-[14px] text-blue-600 font-medium transition-colors"
+                        className="block w-full text-left p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                       >
-                        🔗 {item.data.text}
+                        <span className="text-sm text-blue-600 font-medium">
+                          🔗 {item.data.text}
+                        </span>
                       </button>
                     );
                   }
@@ -275,42 +259,42 @@ export function BrowserScreen({
                 })}
               </div>
 
-              {/* 互动按钮 - 谷歌风格 */}
+              {/* 互动区 */}
               <div className="flex items-center gap-6 pt-4 border-t border-gray-200">
-                <button className="flex items-center gap-2 text-[14px] text-gray-600 hover:text-blue-600 tap">
+                <button className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors">
                   <ThumbsUp size={18} />
                   <span>赞</span>
                 </button>
                 <button
                   onClick={() => setShowComments(!showComments)}
-                  className="flex items-center gap-2 text-[14px] text-gray-600 hover:text-blue-600 tap"
+                  className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors"
                 >
                   <MessageCircle size={18} />
                   <span>评论 {comments.length > 0 && `(${comments.length})`}</span>
                 </button>
-                <button className="flex items-center gap-2 text-[14px] text-gray-600 hover:text-blue-600 tap">
+                <button className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors">
                   <Share2 size={18} />
                   <span>分享</span>
                 </button>
               </div>
 
-              {/* 评论区 - 白色卡片 */}
+              {/* 评论区 */}
               {showComments && (
                 <div className="space-y-4 pt-4 border-t border-gray-200">
-                  <div className="text-[15px] font-semibold text-gray-900">{comments.length} 条评论</div>
+                  <h3 className="text-base font-semibold text-gray-900">{comments.length} 条评论</h3>
                   {comments.map((comment) => (
-                    <div key={comment.id} className="bg-gray-50 rounded-xl p-4 space-y-3 hover:bg-gray-100 transition-colors">
+                    <div key={comment.id} className="bg-gray-50 hover:bg-gray-100 rounded-xl p-4 space-y-3 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="text-2xl">{comment.avatar}</div>
-                        <div className="flex-1">
-                          <div className="text-[13px] font-medium text-gray-900">{comment.author}</div>
-                          <div className="text-[11px] text-gray-500">{comment.time}</div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{comment.author}</div>
+                          <div className="text-xs text-gray-500">{comment.time}</div>
                         </div>
                       </div>
-                      <div className="text-[14px] text-gray-700 leading-relaxed">{comment.content}</div>
+                      <p className="text-sm text-gray-800 leading-relaxed">{comment.content}</p>
                       <button
                         onClick={() => handleLike(comment.id)}
-                        className="flex items-center gap-2 text-[13px] text-gray-600 hover:text-blue-600 tap"
+                        className="flex items-center gap-2 text-xs text-gray-600 hover:text-blue-600 transition-colors"
                       >
                         <ThumbsUp size={14} />
                         <span>{comment.likes}</span>
@@ -321,26 +305,26 @@ export function BrowserScreen({
               )}
             </div>
           ) : (
-            /* 首页 - 谷歌风格 */
-            <div className="p-6 space-y-8">
-              <div className="text-center space-y-3 py-12">
-                <div className="text-7xl">🐑</div>
-                <h2 className="text-xl font-semibold text-gray-900">羊羊浏览器</h2>
-                <p className="text-sm text-gray-500">输入网址或选择下方书签开始浏览</p>
+            /* Chrome新标签页风格 */
+            <div className="p-8 space-y-10">
+              <div className="text-center space-y-4 pt-16">
+                <div className="text-8xl">🐑</div>
+                <h1 className="text-2xl font-medium text-gray-800">羊羊浏览器</h1>
+                <p className="text-sm text-gray-500">输入网址或选择书签开始浏览</p>
               </div>
 
-              <div className="space-y-3">
-                <div className="text-sm font-medium text-gray-700 px-2">📚 常用书签</div>
+              <div className="max-w-2xl mx-auto space-y-4">
+                <h2 className="text-sm font-medium text-gray-700 px-3">常用书签</h2>
                 <div className="grid grid-cols-2 gap-3">
                   {BOOKMARKS.map((bm) => (
                     <button
                       key={bm.url}
                       onClick={() => navigateTo(bm.url)}
-                      className="bg-white border border-gray-200 hover:border-blue-500 hover:shadow-md rounded-2xl p-4 text-left tap space-y-2 transition-all"
+                      className="bg-white hover:bg-gray-50 border border-gray-200 hover:shadow-md rounded-2xl p-5 text-left space-y-2 transition-all"
                     >
-                      <div className="text-3xl">{bm.emoji}</div>
-                      <div className="text-[14px] font-medium text-gray-900">{bm.name}</div>
-                      <div className="text-[11px] text-gray-500 line-clamp-2">{bm.desc}</div>
+                      <div className="text-4xl">{bm.emoji}</div>
+                      <div className="text-sm font-medium text-gray-900">{bm.name}</div>
+                      <div className="text-xs text-gray-500 line-clamp-2">{bm.desc}</div>
                     </button>
                   ))}
                 </div>
