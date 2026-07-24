@@ -85,7 +85,7 @@ export const defaultSettings = (): AppSettings => ({
       authorName: '夜猫子',
       authorAvatar: '🦉',
       text: '深夜食堂营业中...有人一起吃夜宵吗 🍜',
-      imageDescription: '温馨的深夜拉面店，暖黄色灯光',
+      imageDescriptions: ['温馨的深夜拉面店，暖黄色灯光'],
       likes: 23,
       comments: [],
       ts: Date.now() - 8 * 3600 * 1000,
@@ -119,7 +119,7 @@ export const defaultSettings = (): AppSettings => ({
 生活不易，但总有温暖的瞬间。希望每个深夜回家的你，都能找到属于自己的那碗面🍜❤️
 
 #深夜食堂 #城市温度 #一碗面的故事`,
-      imageDescription: '昏黄灯光下的拉面特写，冒着热气的汤面',
+      imageDescriptions: ['昏黄灯光下的拉面特写，冒着热气的汤面'],
       likes: 8234,
       reposts: 1256,
       comments: [
@@ -150,7 +150,7 @@ export const defaultSettings = (): AppSettings => ({
 明天继续前行，下一站：冈仁波齐。期待更多的奇迹🏔️✨
 
 #西藏旅行 #日出 #人生必去的50个地方`,
-      imageDescription: '壮丽的雪山日出，金色阳光洒在雪峰上',
+      imageDescriptions: ['壮丽的雪山日出，金色阳光洒在雪峰上'],
       likes: 15782,
       reposts: 3421,
       comments: [
@@ -236,7 +236,7 @@ The aroma fills the room, the warmth spreads through your hands, and suddenly th
 What's your coffee order? Mine: oat milk latte with an extra shot 💫
 
 #coffee #morningritual #coffeelover`,
-      imageDescription: '精致的咖啡拉花艺术，心形图案',
+      imageDescriptions: ['精致的咖啡拉花艺术，心形图案'],
       likes: 5632,
       reposts: 1203,
       comments: [
@@ -262,7 +262,7 @@ Planning to visit: Senso-ji Temple, TeamLab Borderless, and of course, lots of r
 Any Tokyo recommendations from locals? Drop them below! 👇
 
 #Tokyo #Japan #TravelDiaries`,
-      imageDescription: '东京塔夜景，霓虹灯闪烁的城市',
+      imageDescriptions: ['东京塔夜景，霓虹灯闪烁的城市'],
       likes: 8934,
       reposts: 2156,
       comments: [

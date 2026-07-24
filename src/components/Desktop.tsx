@@ -48,6 +48,12 @@ export function Desktop({
 
   /* ---- swipe paging (pointer based to support mouse drag and touch) ---- */
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Don't interfere with button clicks
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) {
+      return;
+    }
+
     // Capture pointer so we continue receiving events even if the user drags outside the element
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -83,8 +89,6 @@ export function Desktop({
     }
   };
 
-  const gridIds = (pages[page] ?? []).filter((id) => !DOCK_IDS.includes(id));
-
   return (
     <div
       className="absolute inset-0 phone-surface overflow-hidden touch-none"
@@ -98,49 +102,53 @@ export function Desktop({
         className="absolute inset-0 flex transition-transform duration-300 ease-out"
         style={{ transform: `translateX(-${page * 100}%)` }}
       >
-        {pages.map((_, pIdx) => (
-          <div
-            key={pIdx}
-            className="w-full h-full shrink-0 overflow-y-auto no-scrollbar"
-            style={{ touchAction: 'pan-y' }}
-          >
-            <div className="px-4 pt-12 pb-[90px] min-h-full">
-              {pIdx === 0 && (
-                <Page1
-                  music={music}
-                  album={album}
-                  playing={playing}
-                  currentName={currentName}
-                  onTogglePlay={onTogglePlay}
-                  onShortcut={onShortcut}
-                  gridIds={gridIds}
-                  onOpenApp={onOpenApp}
-                />
-              )}
-              {pIdx === 1 && (
-                <Page2
-                  settings={settings}
-                  gridIds={gridIds}
-                  onOpenApp={onOpenApp}
-                  onShortcut={onShortcut}
-                />
-              )}
-              {pIdx === 2 && (
-                <Page3
-                  settings={settings}
-                  gridIds={gridIds}
-                  onOpenApp={onOpenApp}
-                />
-              )}
-              {pIdx >= 3 && (
-                <IconGrid
-                  ids={(pages[pIdx] ?? []).filter((id) => !DOCK_IDS.includes(id))}
-                  onOpenApp={onOpenApp}
-                />
-              )}
+        {pages.map((_, pIdx) => {
+          const gridIds = (pages[pIdx] ?? []).filter((id) => !DOCK_IDS.includes(id));
+
+          return (
+            <div
+              key={pIdx}
+              className="w-full h-full shrink-0 overflow-y-auto no-scrollbar"
+              style={{ touchAction: 'pan-y' }}
+            >
+              <div className="px-4 pt-12 pb-[90px] min-h-full">
+                {pIdx === 0 && (
+                  <Page1
+                    music={music}
+                    album={album}
+                    playing={playing}
+                    currentName={currentName}
+                    onTogglePlay={onTogglePlay}
+                    onShortcut={onShortcut}
+                    gridIds={gridIds}
+                    onOpenApp={onOpenApp}
+                  />
+                )}
+                {pIdx === 1 && (
+                  <Page2
+                    settings={settings}
+                    gridIds={gridIds}
+                    onOpenApp={onOpenApp}
+                    onShortcut={onShortcut}
+                  />
+                )}
+                {pIdx === 2 && (
+                  <Page3
+                    settings={settings}
+                    gridIds={gridIds}
+                    onOpenApp={onOpenApp}
+                  />
+                )}
+                {pIdx >= 3 && (
+                  <IconGrid
+                    ids={gridIds}
+                    onOpenApp={onOpenApp}
+                  />
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* page dots */}

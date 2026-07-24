@@ -10,8 +10,6 @@ export { GamesScreen } from './GamesScreen';
 export { DiscoverScreen } from './DiscoverScreen';
 export { AltAccountsScreen } from './AltAccountsScreen';
 export { AccountManagerScreen } from './AccountManagerScreen';
-export { WeiboScreen } from './WeiboScreen';
-export { TwitterScreen } from './TwitterScreen';
 export { MemoryScreen } from './MemoryScreen';
 export { WeightManageScreen } from './WeightManageScreen';
 export { KitchenScreen } from './KitchenScreen';

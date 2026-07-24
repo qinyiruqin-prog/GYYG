@@ -34,6 +34,8 @@ import { SocialScreen } from '../apps/SocialScreen';
 import { TruthOrDareScreen } from '../apps/TruthOrDareScreen';
 import { PeriodScreen, getPeriodPrompt } from '../apps/PeriodScreen';
 import { TimePerceptionScreen } from '../apps/TimePerceptionScreen';
+import { WeiboScreen } from '../apps/WeiboScreen';
+import { TwitterScreen } from '../apps/TwitterScreen';
 // v3.0 新增应用
 import { IdentityScreenV3 } from '../apps/IdentityScreenV3';
 import { SettingsScreenV3 } from '../apps/SettingsScreenV3';
@@ -46,8 +48,6 @@ import {
   HomeSystemScreen,
   TurtleSoupScreen,
   GamesScreen,
-  WeiboScreen,
-  TwitterScreen,
   MemoryScreen,
   WeightManageScreen,
   DiscoverScreen,
@@ -1194,6 +1194,7 @@ export function PhoneShell({
           posts={settings.socialPosts || []}
           onChange={(socialPosts) => updateSettings({ socialPosts })}
           onBack={goHome}
+          autoTranslateEnabled={settings.autoTranslateEnabled}
         />
       );
     if (open === 'memory')

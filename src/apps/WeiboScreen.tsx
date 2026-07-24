@@ -1,28 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Repeat2, Send, Sparkles, TrendingUp, Image as ImageIcon, X, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { Search, TrendingUp, Home, Bell, Mail, User, Send, Image as ImageIcon, Video, Smile, MoreHorizontal, Heart, MessageCircle, Repeat2, Share, Bookmark, ChevronDown } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { Modal } from '../components/Sheet';
+import { ShareSheet } from '../components/ShareSheet';
 import { SocialImage } from '../components/SocialImage';
 import { uid } from '../utils';
-import { askAI, askAIJson } from '../api';
-import { generateNPCPostBatch } from '../services/npcPostService';
+import { askAI } from '../api';
 import { generateSocialImage } from '../services/imageGenService';
 import type { ApiConfig, SocialPost, UserIdentity, Character } from '../types';
 
-// 热搜话题
-const TRENDING_TOPICS = [
-  { rank: 1, title: '今天天气真好', heat: '2.1亿', tag: 'hot' },
-  { rank: 2, title: '周末去哪玩', heat: '1.8亿', tag: 'new' },
-  { rank: 3, title: '美食推荐', heat: '1.5亿', tag: '' },
-  { rank: 4, title: '今日穿搭', heat: '9876万', tag: 'hot' },
-  { rank: 5, title: '分享日常', heat: '8523万', tag: '' },
-];
-
-const SAMPLE_IMAGES = [
-  'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400',
-  'https://images.pexels.com/photos/1907228/pexels-photo-1907228.jpeg?auto=compress&cs=tinysrgb&w=400',
-  'https://images.pexels.com/photos/2878030/pexels-photo-2878030.jpeg?auto=compress&cs=tinysrgb&w=400',
-];
+interface WeiboUser {
+  id: string;
+  name: string;
+  avatar?: string;
+  bio: string;
+  verified: boolean;
+  followers: number;
+  following: number;
+  posts: number;
+}
 
 export function WeiboScreen({
   api,
@@ -39,79 +35,65 @@ export function WeiboScreen({
   onChange: (p: SocialPost[]) => void;
   onBack: () => void;
 }) {
-  const [tab, setTab] = useState<'timeline' | 'trending'>('timeline');
+  const [tab, setTab] = useState<'home' | 'trending' | 'search'>('home');
+  const [searchQuery, setSearchQuery] = useState('');
   const [composing, setComposing] = useState(false);
   const [content, setContent] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [imageDescriptions, setImageDescriptions] = useState<string[]>([]);
-  const [topic, setTopic] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
-  const [commenting, setCommenting] = useState<SocialPost | null>(null);
+  const [selectedPost, setSelectedPost] = useState<SocialPost | null>(null);
+  const [commenting, setCommenting] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const [detail, setDetail] = useState<SocialPost | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [trendingRefreshing, setTrendingRefreshing] = useState(false);
-  const [trendingPosts, setTrendingPosts] = useState<SocialPost[]>([]);
-  const [selectedTrending, setSelectedTrending] = useState<string>('');
+  const [sharingPost, setSharingPost] = useState<SocialPost | null>(null);
 
-  const weiboPosts = posts.filter((p) => p.platform === 'weibo').sort((a, b) => b.ts - a.ts);
+  // 热门话题
+  const trendingTopics = [
+    { tag: '深夜食堂', count: '821万讨论', hot: true },
+    { tag: '周末去哪玩', count: '567万讨论', hot: true },
+    { tag: '今日穿搭', count: '432万讨论', hot: false },
+    { tag: '美食分享', count: '398万讨论', hot: false },
+    { tag: '读书笔记', count: '276万讨论', hot: false },
+  ];
 
-  // 手动刷新获取NPC新帖子
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const npcPosts = generateNPCPostBatch(characters, posts, 'weibo');
-      onChange([...posts, ...npcPosts]);
-      await new Promise(resolve => setTimeout(resolve, 800));
-    } finally {
-      setRefreshing(false);
+  // 推荐关注用户
+  const recommendedUsers: WeiboUser[] = [
+    {
+      id: 'user1',
+      name: '美食博主小张',
+      avatar: '🍜',
+      bio: '探店达人｜美食摄影｜合作请私信',
+      verified: true,
+      followers: 128000,
+      following: 456,
+      posts: 2340
+    },
+    {
+      id: 'user2',
+      name: '旅行摄影师Leo',
+      avatar: '📷',
+      bio: '用镜头记录世界｜已走过47个国家',
+      verified: true,
+      followers: 567000,
+      following: 234,
+      posts: 1890
+    },
+    {
+      id: 'user3',
+      name: '科技数码评测',
+      avatar: '💻',
+      bio: '专业数码测评｜真实体验｜不吹不黑',
+      verified: true,
+      followers: 234000,
+      following: 189,
+      posts: 1234
     }
-  };
+  ];
 
-  // 热搜话题点击：生成该话题的帖子
-  const handleTrendingClick = async (trendingTitle: string) => {
-    setSelectedTrending(trendingTitle);
-    setTrendingRefreshing(true);
-    try {
-      const sys = `你在模拟微博用户发微博，话题是"${trendingTitle}"。内容口语化真实，20-150字，必须带话题标签#${trendingTitle}#，可以带emoji。只输出正文。`;
-      const text = await askAI(api, sys, `请根据"${trendingTitle}"这个热搜话题发一条微博：`, { temperature: 0.9, maxTokens: 200 });
+  const weiboPosts = posts.filter(p => p.platform === 'weibo').sort((a, b) => b.ts - a.ts);
 
-      // 生成5-8条关于这个话题的帖子
-      const newPosts: SocialPost[] = [];
-      for (let i = 0; i < (Math.random() > 0.5 ? 5 : 8); i++) {
-        const char = characters[Math.floor(Math.random() * characters.length)];
-        newPosts.push({
-          id: uid(),
-          platform: 'weibo',
-          authorId: char?.id ?? `user-${i}`,
-          authorName: char?.name ?? `网友${i}`,
-          authorAvatar: char?.avatar,
-          content: `${text}\n#${trendingTitle}#`,
-          likes: Math.floor(Math.random() * 200) + 10,
-          reposts: Math.floor(Math.random() * 100),
-          comments: [],
-          ts: Date.now() - Math.random() * 3600000,
-        });
-      }
-
-      setTrendingPosts(newPosts);
-      await new Promise(resolve => setTimeout(resolve, 600));
-    } catch (e) {
-      alert(`加载话题失败：${(e as Error).message}`);
-    } finally {
-      setTrendingRefreshing(false);
-    }
-  };
-
-  // 热搜刷新
-  const handleTrendingRefresh = () => {
-    if (selectedTrending) {
-      handleTrendingClick(selectedTrending);
-    }
-  };
-
-  const post = () => {
+  const handlePost = () => {
     if (!content.trim()) return;
     const p: SocialPost = {
       id: uid(),
@@ -122,90 +104,62 @@ export function WeiboScreen({
       content: content.trim(),
       images: images.length > 0 ? images : undefined,
       imageDescriptions: imageDescriptions.length > 0 ? imageDescriptions : undefined,
-      topic: topic.trim() || undefined,
       likes: 0,
       reposts: 0,
       comments: [],
-      ts: Date.now(),
+      ts: Date.now()
     };
-    onChange([...posts, p]);
+    onChange([p, ...posts]);
     setContent('');
     setImages([]);
     setImageDescriptions([]);
-    setTopic('');
     setComposing(false);
   };
 
-  const aiPost = async () => {
-    setGenerating(true);
-    try {
-      const names = characters.slice(0, 5).map((c) => c.name).join('、') || '网友';
-      const sys = '你在模拟微博用户发微博。内容口语化真实，15-120字，可以带话题标签#xxx#，可以带emoji。只输出正文。';
-      const text = await askAI(api, sys, `可能的人物：${names}\n请发一条微博：`, { temperature: 0.95, maxTokens: 150 });
-      const c = characters[Math.floor(Math.random() * characters.length)];
-      const useImage = Math.random() > 0.5;
-
-      let postImages: string[] | undefined = undefined;
-      let postImageDescriptions: string[] | undefined = undefined;
-
-      if (useImage) {
-        // 生成图片描述
-        const imagePrompt = `根据这条微博内容生成一张配图：${text.substring(0, 100)}`;
-        const descSys = '你是图片描述生成器。根据微博内容，用10-20字描述一张适合的配图。只输出描述，不要引号。';
-        const imageDesc = await askAI(api, descSys, imagePrompt, { temperature: 0.8, maxTokens: 50 });
-
-        // 尝试生成真实图片
-        const imageResult = await generateSocialImage(api, imageDesc.trim());
-
-        if (imageResult.url) {
-          postImages = [imageResult.url];
-        } else {
-          postImageDescriptions = [imageResult.description];
-        }
-      }
-
-      const p: SocialPost = {
-        id: uid(),
-        platform: 'weibo',
-        authorId: c?.id ?? 'ai',
-        authorName: c?.name ?? 'AI网友',
-        authorAvatar: c?.avatar,
-        content: text.trim(),
-        images: postImages,
-        imageDescriptions: postImageDescriptions,
-        likes: Math.floor(Math.random() * 200),
-        reposts: Math.floor(Math.random() * 50),
-        comments: [],
-        isHot: Math.random() > 0.7,
-        ts: Date.now(),
-      };
-      onChange([...posts, p]);
-      setComposing(false);
-    } catch (e) {
-      alert(`AI生成失败：${(e as Error).message}`);
-    } finally {
-      setGenerating(false);
-    }
+  const handleLike = (postId: string) => {
+    onChange(posts.map(p => p.id === postId ? { ...p, likes: p.likes + 1 } : p));
   };
 
-  const like = (id: string) => onChange(posts.map((p) => p.id === id ? { ...p, likes: p.likes + 1 } : p));
-  const repost = (id: string) => onChange(posts.map((p) => p.id === id ? { ...p, reposts: p.reposts + 1 } : p));
-  const comment = () => {
-    if (!commentText.trim() || !commenting) return;
-    onChange(posts.map((p) => p.id === commenting.id ? { ...p, comments: [...p.comments, { id: uid(), authorName: me?.nickname ?? '我', content: commentText.trim(), ts: Date.now() }] } : p));
+  const handleRepost = (postId: string) => {
+    onChange(posts.map(p => p.id === postId ? { ...p, reposts: p.reposts + 1 } : p));
+  };
+
+  const handleComment = () => {
+    if (!commentText.trim() || !selectedPost) return;
+    onChange(posts.map(p =>
+      p.id === selectedPost.id
+        ? { ...p, comments: [...p.comments, { id: uid(), authorName: me?.nickname ?? '我', content: commentText.trim(), ts: Date.now() }] }
+        : p
+    ));
     setCommentText('');
-    setCommenting(null);
+    setCommenting(false);
+  };
+
+  const handleShare = (post: SocialPost) => {
+    setSharingPost(post);
+  };
+
+  const handleShareConfirm = (targetId: string, targetType: 'chat' | 'weibo' | 'twitter') => {
+    if (!sharingPost) return;
+
+    // 这里应该发送消息到聊天或社交媒体
+    // 暂时使用alert提示
+    const targetName = targetType === 'chat' ? '聊天' : targetType === 'weibo' ? '微博私信' : 'Twitter私信';
+    alert(`已分享到${targetName}（功能开发中）`);
+
+    // TODO: 实际实现分享逻辑
+    // 1. 如果是chat，需要创建或更新chatThread
+    // 2. 如果是weibo/twitter，需要发送私信
+
+    setSharingPost(null);
   };
 
   const addImage = async () => {
     if (images.length + imageDescriptions.length >= 9) return;
     setGeneratingImage(true);
     try {
-      // 生成图片描述
-      const descSys = '你是图片描述生成器。生成一个10-20字的图片内容描述，比如"晴朗天空下的城市街景"、"温馨的咖啡厅一角"等。只输出描述。';
+      const descSys = '你是图片描述生成器。生成一个10-20字的图片内容描述。只输出描述。';
       const imageDesc = await askAI(api, descSys, '请生成一个适合微博配图的描述：', { temperature: 0.9, maxTokens: 50 });
-
-      // 尝试生成真实图片
       const imageResult = await generateSocialImage(api, imageDesc.trim());
 
       if (imageResult.url) {
@@ -220,310 +174,259 @@ export function WeiboScreen({
     }
   };
 
-  const removeImage = (idx: number) => setImages(images.filter((_, i) => i !== idx));
-  const removeImageDescription = (idx: number) => setImageDescriptions(imageDescriptions.filter((_, i) => i !== idx));
-
-  // 详情页
-  if (detail) {
-    const p = posts.find((x) => x.id === detail.id) ?? detail;
-    return (
-      <AppScreen title="微博详情" onBack={() => setDetail(null)} noPad>
-        <div className="flex-1 overflow-y-auto no-scrollbar">
-          <div className="px-4 py-4 border-b border-[var(--border)]">
-            <div className="flex items-center gap-2.5 mb-3">
-              {p.authorAvatar ? (
-                <img src={p.authorAvatar} className="w-11 h-11 rounded-full object-cover" alt="" />
-              ) : (
-                <div className="w-11 h-11 rounded-full icon-bg flex items-center justify-center text-[14px] txt-accent">{p.authorName[0] || '?'}</div>
-              )}
-              <div className="flex-1">
-                <div className="text-[15px] font-medium flex items-center gap-1.5">
-                  {p.authorName}
-                  {p.isHot && <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-500">热</span>}
-                </div>
-                <div className="text-[12px] txt-faint">{new Date(p.ts).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })}</div>
-              </div>
-            </div>
-            <div className="text-[15px] leading-relaxed whitespace-pre-wrap mb-3">{p.content}</div>
-            {p.topic && <div className="text-[14px] txt-accent mb-3">#{p.topic}#</div>}
-            {(p.images && p.images.length > 0 || p.imageDescriptions && p.imageDescriptions.length > 0) && (
-              <div className="grid grid-cols-3 gap-1.5 mb-3">
-                {p.images?.map((img, i) => (
-                  <SocialImage
-                    key={`img-${i}`}
-                    url={img}
-                    description=""
-                    hasApi={true}
-                    className="aspect-square rounded-lg"
-                  />
-                ))}
-                {p.imageDescriptions?.map((desc, i) => (
-                  <SocialImage
-                    key={`desc-${i}`}
-                    url={undefined}
-                    description={desc}
-                    hasApi={false}
-                    className="aspect-square rounded-lg"
-                  />
-                ))}
-              </div>
-            )}
-            <div className="flex items-center gap-6 text-[14px] txt-faint pt-2">
-              <button onClick={() => like(p.id)} className="tap flex items-center gap-1.5"><Heart size={16} className="txt-accent" /> {p.likes}</button>
-              <button onClick={() => setCommenting(p)} className="tap flex items-center gap-1.5"><MessageCircle size={16} /> {p.comments.length}</button>
-              <button onClick={() => repost(p.id)} className="tap flex items-center gap-1.5"><Repeat2 size={16} /> {p.reposts}</button>
-            </div>
-          </div>
-          <div className="px-4 py-3">
-            <div className="text-[14px] font-medium mb-3">评论 {p.comments.length}</div>
-            {p.comments.length === 0 ? (
-              <div className="text-[13px] txt-faint text-center py-8">还没有评论</div>
-            ) : (
-              <div className="space-y-3">
-                {p.comments.map((c) => (
-                  <div key={c.id} className="text-[14px]">
-                    <span className="txt-accent font-medium">{c.authorName}：</span>
-                    <span className="txt-dim">{c.content}</span>
-                    <div className="text-[11px] txt-faint mt-0.5">{new Date(c.ts).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </AppScreen>
-    );
-  }
-
   return (
-    <AppScreen
-      title="微博"
-      onBack={onBack}
-      noPad
-      right={
-        <button onClick={() => setComposing(true)} className="tap text-[var(--accent)]">
-          <Send size={22} />
-        </button>
-      }
-    >
-      {/* tabs */}
-      <div className="px-4 pt-3 pb-2 border-b border-[var(--border)] flex gap-4 shrink-0">
-        <button onClick={() => setTab('timeline')} className={`tap text-[15px] font-medium pb-2 relative ${tab === 'timeline' ? 'txt-accent' : 'txt-faint'}`}>
-          时间线
-          {tab === 'timeline' && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: 'var(--accent)' }} />}
-        </button>
-        <button onClick={() => setTab('trending')} className={`tap text-[15px] font-medium pb-2 relative ${tab === 'trending' ? 'txt-accent' : 'txt-faint'}`}>
-          热搜
-          {tab === 'trending' && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: 'var(--accent)' }} />}
-        </button>
-      </div>
-
-      {/* timeline */}
-      {tab === 'timeline' && (
-        <div className="flex-1 overflow-y-auto no-scrollbar">
-          <div className="px-4 pt-3 pb-2 flex justify-center sticky top-0 z-10 bg-[var(--bg)]/95 backdrop-blur">
-            <button onClick={handleRefresh} disabled={refreshing} className="tap flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-[13px] disabled:opacity-50">
-              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-              {refreshing ? '加载中…' : '刷新'}
+    <AppScreen title="微博" onBack={onBack} noPad>
+      <div className="flex flex-col h-full bg-[var(--bg)]">
+        {/* 顶部搜索栏 */}
+        <div className="px-4 py-3 border-b border-[var(--border)] shrink-0 bg-[var(--bg)]">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex-1 flex items-center gap-2 bg-[var(--surface)] rounded-full px-4 h-10">
+              <Search size={16} className="txt-faint" />
+              <input
+                type="text"
+                placeholder="搜索微博、用户、话题"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent outline-none text-[14px] txt-accent"
+              />
+            </div>
+            <button onClick={() => setComposing(true)} className="tap px-4 h-10 rounded-full bg-[var(--accent)] text-white font-medium">
+              发微博
             </button>
           </div>
-          {weiboPosts.length === 0 ? (
-            <div className="text-center txt-faint mt-16">还没有微博，发第一条吧</div>
-          ) : (
+
+          {/* Tab切换 */}
+          <div className="flex gap-6">
+            <button
+              onClick={() => setTab('home')}
+              className={`text-[15px] font-medium pb-2 relative ${tab === 'home' ? 'txt-accent' : 'txt-faint'}`}
+            >
+              首页
+              {tab === 'home' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--accent)] rounded-full" />}
+            </button>
+            <button
+              onClick={() => setTab('trending')}
+              className={`text-[15px] font-medium pb-2 relative ${tab === 'trending' ? 'txt-accent' : 'txt-faint'}`}
+            >
+              热搜
+              {tab === 'trending' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--accent)] rounded-full" />}
+            </button>
+          </div>
+        </div>
+
+        {/* 主内容区 */}
+        <div className="flex-1 overflow-y-auto">
+          {tab === 'home' && (
             <div className="divide-y divide-[var(--border)]">
-              {weiboPosts.map((p) => (
-                <div key={p.id} className="px-4 py-4 tap" onClick={() => setDetail(p)}>
-                  <div className="flex items-start gap-2.5">
-                    {p.authorAvatar ? (
-                      <img src={p.authorAvatar} className="w-10 h-10 rounded-full object-cover shrink-0" alt="" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full icon-bg flex items-center justify-center text-[13px] txt-accent shrink-0">{p.authorName[0] || '?'}</div>
-                    )}
+              {weiboPosts.map(post => (
+                <div key={post.id} className="p-4 hover:bg-[var(--surface)] transition-colors">
+                  {/* 用户信息 */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-[var(--surface)] flex items-center justify-center text-[20px] shrink-0">
+                      {post.authorAvatar || '👤'}
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-[14px] font-medium">{p.authorName}</span>
-                        {p.isHot && <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-500">热</span>}
-                        <span className="text-[11px] txt-faint">{new Date(p.ts).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[15px] font-medium txt-accent">{post.authorName}</span>
+                        {post.isHot && <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-500">热</span>}
                       </div>
-                      <div className="text-[14px] leading-relaxed txt-dim whitespace-pre-wrap mb-2">{p.content}</div>
-                      {p.topic && <div className="text-[13px] txt-accent mb-2">#{p.topic}#</div>}
-                      {(p.images && p.images.length > 0 || p.imageDescriptions && p.imageDescriptions.length > 0) && (
-                        <div className={`grid gap-1.5 mb-2 ${(p.images?.length || 0) + (p.imageDescriptions?.length || 0) === 1 ? 'grid-cols-1' : 'grid-cols-3'}`}>
-                          {p.images?.map((img, i) => (
-                            <SocialImage
-                              key={`img-${i}`}
-                              url={img}
-                              description=""
-                              hasApi={true}
-                              className="aspect-square rounded-lg"
-                            />
-                          ))}
-                          {p.imageDescriptions?.map((desc, i) => (
-                            <SocialImage
-                              key={`desc-${i}`}
-                              url={undefined}
-                              description={desc}
-                              hasApi={false}
-                              className="aspect-square rounded-lg"
-                            />
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-5 text-[13px] txt-faint">
-                        <button onClick={(e) => { e.stopPropagation(); like(p.id); }} className="tap flex items-center gap-1"><Heart size={14} /> {p.likes}</button>
-                        <button onClick={(e) => { e.stopPropagation(); setCommenting(p); }} className="tap flex items-center gap-1"><MessageCircle size={14} /> {p.comments.length}</button>
-                        <button onClick={(e) => { e.stopPropagation(); repost(p.id); }} className="tap flex items-center gap-1"><Repeat2 size={14} /> {p.reposts}</button>
+                      <div className="text-[12px] txt-faint">
+                        {new Date(post.ts).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })}
                       </div>
                     </div>
+                    <button className="tap p-2">
+                      <MoreHorizontal size={18} className="txt-faint" />
+                    </button>
+                  </div>
+
+                  {/* 内容 */}
+                  <div className="text-[15px] leading-relaxed txt-dim whitespace-pre-wrap mb-3">
+                    {post.content}
+                  </div>
+
+                  {/* 话题标签 */}
+                  {post.topic && (
+                    <div className="mb-3">
+                      <span className="text-[14px] text-blue-500">#{post.topic}#</span>
+                    </div>
+                  )}
+
+                  {/* 图片 */}
+                  {(post.images || post.imageDescriptions) && (
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      {post.images?.map((img, i) => (
+                        <SocialImage key={`img-${i}`} url={img} description="" hasApi={true} className="aspect-square rounded-lg" />
+                      ))}
+                      {post.imageDescriptions?.map((desc, i) => (
+                        <SocialImage key={`desc-${i}`} url={undefined} description={desc} hasApi={false} className="aspect-square rounded-lg" />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 互动按钮 */}
+                  <div className="flex items-center justify-between pt-3 border-t border-[var(--border)]">
+                    <button onClick={() => { setSelectedPost(post); setCommenting(true); }} className="tap flex items-center gap-2 txt-faint hover:text-blue-500">
+                      <MessageCircle size={18} />
+                      <span className="text-[13px]">{post.comments.length > 0 && post.comments.length}</span>
+                    </button>
+                    <button onClick={() => handleRepost(post.id)} className="tap flex items-center gap-2 txt-faint hover:text-green-500">
+                      <Repeat2 size={18} />
+                      <span className="text-[13px]">{post.reposts > 0 && post.reposts}</span>
+                    </button>
+                    <button onClick={() => handleLike(post.id)} className="tap flex items-center gap-2 txt-faint hover:text-red-500">
+                      <Heart size={18} />
+                      <span className="text-[13px]">{post.likes > 0 && post.likes}</span>
+                    </button>
+                    <button onClick={() => handleShare(post)} className="tap flex items-center gap-2 txt-faint hover:text-blue-500">
+                      <Share size={18} />
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      )}
 
-      {/* trending */}
-      {tab === 'trending' && (
-        <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-3">
-          {selectedTrending && trendingPosts.length > 0 ? (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <button onClick={() => { setSelectedTrending(''); setTrendingPosts([]); }} className="tap text-[14px] txt-accent mb-2">← 返回热搜</button>
-                  <div className="text-[18px] font-bold">#{selectedTrending}#</div>
+          {tab === 'trending' && (
+            <div className="p-4">
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp size={20} className="txt-accent" />
+                  <span className="text-[16px] font-bold txt-accent">热搜榜</span>
                 </div>
-                <button onClick={handleTrendingRefresh} disabled={trendingRefreshing} className="tap flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-[13px] disabled:opacity-50">
-                  <RefreshCw size={14} className={trendingRefreshing ? 'animate-spin' : ''} />
-                  {trendingRefreshing ? '加载中…' : '刷新'}
-                </button>
               </div>
-              <div className="divide-y divide-[var(--border)]">
-                {trendingPosts.map((p) => (
-                  <div key={p.id} className="tap glass rounded-2xl p-3.5 my-2" onClick={() => setDetail(p)}>
-                    <div className="flex items-start gap-2.5 mb-2">
-                      {p.authorAvatar ? (
-                        <img src={p.authorAvatar} className="w-10 h-10 rounded-full object-cover shrink-0" alt="" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full icon-bg flex items-center justify-center text-[14px] txt-accent shrink-0">{p.authorName[0]}</div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[14px] font-medium">{p.authorName}</div>
-                        <div className="text-[12px] txt-faint">{new Date(p.ts).toLocaleString('zh-CN')}</div>
-                      </div>
-                    </div>
-                    <div className="text-[14px] mb-2 leading-relaxed txt-dim whitespace-pre-wrap line-clamp-4">{p.content}</div>
-                    <div className="flex items-center gap-4 text-[12px] txt-faint">
-                      <div className="flex items-center gap-1"><Heart size={14} /> {p.likes}</div>
-                      <div className="flex items-center gap-1"><MessageCircle size={14} /> {p.comments?.length || 0}</div>
-                      <div className="flex items-center gap-1"><Repeat2 size={14} /> {p.reposts}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <TrendingUp size={18} className="txt-accent" />
-                  <div className="text-[14px] txt-dim">实时热搜榜</div>
-                </div>
-                <button onClick={() => setTrendingRefreshing(!trendingRefreshing)} disabled={trendingRefreshing} className="tap flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-[13px] disabled:opacity-50">
-                  <RefreshCw size={14} className={trendingRefreshing ? 'animate-spin' : ''} />
-                  {trendingRefreshing ? '加载中…' : '刷新'}
-                </button>
-              </div>
+
               <div className="space-y-2">
-                {TRENDING_TOPICS.map((t) => (
-                  <div key={t.rank} className="tap glass rounded-xl p-3 flex items-center gap-3" onClick={() => handleTrendingClick(t.title)}>
-                    <div className={`text-[18px] font-bold w-6 text-center ${t.rank <= 3 ? 'txt-accent' : 'txt-faint'}`}>{t.rank}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[14px] font-medium flex items-center gap-1.5">
-                        {t.title}
-                        {t.tag === 'hot' && <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-500">热</span>}
-                        {t.tag === 'new' && <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-500">新</span>}
-                      </div>
-                      <div className="text-[12px] txt-faint">{t.heat} 讨论</div>
+                {trendingTopics.map((topic, idx) => (
+                  <div key={idx} className="tap glass rounded-xl p-4 flex items-center gap-4">
+                    <div className={`text-[20px] font-bold w-8 text-center ${idx < 3 ? 'text-red-500' : 'txt-faint'}`}>
+                      {idx + 1}
                     </div>
-                    <TrendingUp size={16} className="txt-faint shrink-0" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[15px] font-medium txt-accent">#{topic.tag}</span>
+                        {topic.hot && <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-500">热</span>}
+                      </div>
+                      <div className="text-[12px] txt-faint">{topic.count}</div>
+                    </div>
                   </div>
                 ))}
               </div>
-            </>
+
+              <div className="mt-6">
+                <div className="text-[16px] font-bold txt-accent mb-3">推荐关注</div>
+                <div className="space-y-3">
+                  {recommendedUsers.map(user => (
+                    <div key={user.id} className="glass rounded-xl p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 rounded-full bg-[var(--surface)] flex items-center justify-center text-[20px]">
+                          {user.avatar}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[15px] font-medium txt-accent">{user.name}</span>
+                            {user.verified && <span className="text-blue-500">✓</span>}
+                          </div>
+                          <div className="text-[12px] txt-faint mb-2">{user.bio}</div>
+                          <div className="flex items-center gap-4 text-[11px] txt-faint">
+                            <span>{(user.followers / 10000).toFixed(1)}万 粉丝</span>
+                            <span>{user.posts} 微博</span>
+                          </div>
+                        </div>
+                        <button className="tap px-4 py-1.5 rounded-full bg-[var(--accent)] text-white text-[13px] font-medium">
+                          关注
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
         </div>
-      )}
 
-      {/* compose modal */}
-      <Modal open={composing} onClose={() => setComposing(false)} title="发微博">
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="分享新鲜事..."
-          rows={4}
-          className="w-full glass rounded-xl px-3 py-2.5 text-[14px] outline-none bg-transparent resize-none mb-3"
-          autoFocus
-        />
-        <input
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="添加话题（选填）"
-          className="w-full glass rounded-xl px-3 h-10 text-[13px] outline-none bg-transparent mb-3"
-        />
-        {(images.length > 0 || imageDescriptions.length > 0) && (
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {images.map((img, i) => (
-              <div key={`img-${i}`} className="relative aspect-square">
-                <img src={img} className="w-full h-full object-cover rounded-lg" alt="" />
-                <button onClick={() => removeImage(i)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center tap">
-                  <X size={14} className="text-white" />
-                </button>
-              </div>
-            ))}
-            {imageDescriptions.map((desc, i) => (
-              <div key={`desc-${i}`} className="relative aspect-square">
-                <SocialImage url={undefined} description={desc} hasApi={false} className="h-full" />
-                <button onClick={() => removeImageDescription(i)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center tap">
-                  <X size={14} className="text-white" />
-                </button>
-              </div>
-            ))}
+        {/* 发微博弹窗 */}
+        <Modal open={composing} onClose={() => setComposing(false)} title="发微博">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="分享新鲜事..."
+            rows={6}
+            className="w-full glass rounded-xl px-3 py-2.5 text-[14px] outline-none bg-transparent resize-none mb-3"
+            autoFocus
+          />
+
+          {(images.length > 0 || imageDescriptions.length > 0) && (
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {images.map((img, i) => (
+                <div key={`img-${i}`} className="relative aspect-square">
+                  <img src={img} className="w-full h-full object-cover rounded-lg" alt="" />
+                  <button onClick={() => setImages(images.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center tap">
+                    <span className="text-white text-[12px]">×</span>
+                  </button>
+                </div>
+              ))}
+              {imageDescriptions.map((desc, i) => (
+                <div key={`desc-${i}`} className="relative aspect-square">
+                  <SocialImage url={undefined} description={desc} hasApi={false} className="h-full" />
+                  <button onClick={() => setImageDescriptions(imageDescriptions.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center tap">
+                    <span className="text-white text-[12px]">×</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 mb-4">
+            <button onClick={addImage} disabled={images.length + imageDescriptions.length >= 9 || generatingImage} className="tap glass rounded-lg p-2 disabled:opacity-50">
+              <ImageIcon size={20} className="txt-accent" />
+            </button>
+            <button className="tap glass rounded-lg p-2">
+              <Video size={20} className="txt-accent" />
+            </button>
+            <button className="tap glass rounded-lg p-2">
+              <Smile size={20} className="txt-accent" />
+            </button>
+            <div className="flex-1 text-[12px] txt-faint text-right">
+              {generatingImage ? '生成中...' : `${images.length + imageDescriptions.length}/9`}
+            </div>
           </div>
-        )}
-        <div className="flex items-center gap-2 mb-3">
-          <button onClick={addImage} disabled={images.length + imageDescriptions.length >= 9 || generatingImage} className="tap glass rounded-lg p-2 disabled:opacity-50">
-            <ImageIcon size={20} className="txt-accent" />
-          </button>
-          <span className="text-[12px] txt-faint">
-            {generatingImage ? '生成中...' : `${images.length + imageDescriptions.length}/9`}
-          </span>
-        </div>
-        <div className="flex gap-3">
-          <button onClick={aiPost} disabled={generating} className="tap flex-1 h-11 rounded-full glass font-medium flex items-center justify-center gap-1.5 disabled:opacity-50">
-            <Sparkles size={16} className="txt-accent" /> {generating ? '生成中…' : 'AI 发微博'}
-          </button>
-          <button onClick={post} disabled={!content.trim()} className="tap flex-1 h-11 rounded-full font-medium text-[var(--bg)] disabled:opacity-50" style={{ background: 'var(--accent)' }}>
-            发布
-          </button>
-        </div>
-      </Modal>
 
-      {/* comment modal */}
-      <Modal open={!!commenting} onClose={() => setCommenting(null)} title="评论">
-        <div className="mb-3 text-[13px] txt-dim bg-[var(--bg-elev)] rounded-xl p-3 line-clamp-3">{commenting?.content}</div>
-        <input
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && comment()}
-          placeholder="写下你的评论..."
-          className="w-full glass rounded-xl px-3 h-11 text-[14px] outline-none bg-transparent mb-3"
-          autoFocus
+          <div className="flex gap-3">
+            <button onClick={() => setComposing(false)} className="tap flex-1 h-11 rounded-full glass font-medium">
+              取消
+            </button>
+            <button onClick={handlePost} disabled={!content.trim()} className="tap flex-1 h-11 rounded-full bg-[var(--accent)] text-white font-medium disabled:opacity-50">
+              发布
+            </button>
+          </div>
+        </Modal>
+
+        {/* 评论弹窗 */}
+        <Modal open={commenting} onClose={() => setCommenting(false)} title="评论">
+          <div className="mb-3 text-[13px] txt-dim bg-[var(--surface)] rounded-xl p-3 line-clamp-3">
+            {selectedPost?.content}
+          </div>
+          <textarea
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="写下你的评论..."
+            rows={4}
+            className="w-full glass rounded-xl px-3 py-2.5 text-[14px] outline-none bg-transparent resize-none mb-3"
+            autoFocus
+          />
+          <button onClick={handleComment} disabled={!commentText.trim()} className="tap w-full h-11 rounded-full bg-[var(--accent)] text-white font-medium disabled:opacity-50">
+            发送
+          </button>
+        </Modal>
+
+        {/* 分享弹窗 */}
+        <ShareSheet
+          open={!!sharingPost}
+          onClose={() => setSharingPost(null)}
+          onShare={handleShareConfirm}
+          title="分享微博"
         />
-        <button onClick={comment} disabled={!commentText.trim()} className="tap w-full h-11 rounded-full font-medium text-[var(--bg)] disabled:opacity-50" style={{ background: 'var(--accent)' }}>
-          发送
-        </button>
-      </Modal>
+      </div>
     </AppScreen>
   );
 }
