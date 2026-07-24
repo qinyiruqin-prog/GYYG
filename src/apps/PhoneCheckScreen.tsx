@@ -1,22 +1,31 @@
 import { useState } from 'react';
 import { AppScreen } from '../components/AppScreen';
 import { ListGroup, Row } from '../components/ui';
-import type { Character, ChatThread, Moment } from '../types';
+import type { Character, ChatThread, Moment, Partition, ApiConfig, SMS, Mail } from '../types';
+import { askAI } from '../api';
 
 interface PhoneCheckScreenProps {
+  api: ApiConfig;
   characters: Character[];
   chatThreads: ChatThread[];
   moments: Moment[];
+  partitions: Partition[];
+  smsThreads: SMS[];
+  mails: Mail[];
   onBack: () => void;
-  onCheckPhone: (charId: string) => Promise<{ caught: boolean; reaction?: string }>;
+  activeUserId?: string;
 }
 
 export function PhoneCheckScreen({
+  api,
   characters,
   chatThreads,
   moments,
+  partitions,
+  smsThreads,
+  mails,
   onBack,
-  onCheckPhone,
+  activeUserId,
 }: PhoneCheckScreenProps) {
   const [selectedCharId, setSelectedCharId] = useState<string>('');
   const [checking, setChecking] = useState(false);
@@ -25,12 +34,17 @@ export function PhoneCheckScreen({
     caught: boolean;
     reaction?: string;
   } | null>(null);
-  const [viewMode, setViewMode] = useState<'chats' | 'moments' | null>(null);
+  const [viewMode, setViewMode] = useState<'chats' | 'moments' | 'sms' | 'mail' | null>(null);
 
   const selectedChar = characters.find(c => c.id === selectedCharId);
 
+  // 获取角色所在的分组
+  const getCharPartition = (charId: string) => {
+    return partitions.find(p => p.charIds.includes(charId));
+  };
+
   const handleCheck = async () => {
-    if (!selectedCharId) return;
+    if (!selectedCharId || !selectedChar) return;
 
     setChecking(true);
     setCheckResult(null);
@@ -38,17 +52,37 @@ export function PhoneCheckScreen({
     // 模拟检查过程
     await new Promise(resolve => setTimeout(resolve, 2000));
 
+    // 30%概率被发现
+    const caught = Math.random() < 0.3;
+
     try {
-      const result = await onCheckPhone(selectedCharId);
+      if (caught) {
+        // 生成AI反应
+        const prompt = `你是${selectedChar.name}，你发现有人在偷看你的手机。
+
+角色人设：${selectedChar.persona}
+
+请生成一个简短的反应（1-2句话），表达你的情绪和态度。可以是生气、尴尬、调侃、无奈等。`;
+
+        const reaction = await askAI(api, selectedChar.persona, prompt, { temperature: 0.9, maxTokens: 100 });
+
+        setCheckResult({
+          success: true,
+          caught: true,
+          reaction,
+        });
+      } else {
+        setCheckResult({
+          success: true,
+          caught: false,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to generate reaction:', err);
       setCheckResult({
         success: true,
-        caught: result.caught,
-        reaction: result.reaction,
-      });
-    } catch (err) {
-      setCheckResult({
-        success: false,
-        caught: false,
+        caught,
+        reaction: caught ? '你...你在看我的手机？！' : undefined,
       });
     } finally {
       setChecking(false);
@@ -61,16 +95,26 @@ export function PhoneCheckScreen({
   // 获取选中角色的朋友圈
   const charMoments = moments.filter(m => m.characterId === selectedCharId);
 
+  // 获取选中角色的短信（模拟）
+  const charSMS = smsThreads.filter(s => s.characterId === selectedCharId);
+
+  // 获取选中角色的邮件（模拟）
+  const charMails = mails.filter(m => m.from === selectedChar?.name || m.to === selectedChar?.name);
+
   return (
     <AppScreen title="查手机" onBack={onBack}>
       {/* 说明 */}
       <div className="mb-4 p-4 glass-strong rounded-2xl">
         <div className="text-[13px] font-medium mb-2 txt-accent">🔍 查手机功能</div>
         <div className="text-[12px] txt-faint space-y-1">
-          <div>• 偷偷查看角色的聊天记录、朋友圈</div>
+          <div>• 偷偷查看角色的聊天记录、朋友圈、短信、邮件</div>
           <div>• <span className="text-red-400">有被发现的风险！</span>被发现概率：30%</div>
           <div>• 被发现后，AI会生成角色的真实反应</div>
           <div>• 可能影响你和角色的关系</div>
+          <div className="mt-2 pt-2 border-t border-white/10">
+            <span className="text-yellow-400">⚠️ 角色也可能反查你的手机</span>
+          </div>
+          <div>• 角色只能看到与TA同分组的内容</div>
         </div>
       </div>
 
@@ -173,6 +217,22 @@ export function PhoneCheckScreen({
               >
                 <span className="text-[20px]">📷</span>
                 <span>查看朋友圈 ({charMoments.length})</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('sms')}
+                className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent flex items-center justify-center gap-2"
+              >
+                <span className="text-[20px]">💬</span>
+                <span>查看短信 ({charSMS.length})</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('mail')}
+                className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent flex items-center justify-center gap-2"
+              >
+                <span className="text-[20px]">📧</span>
+                <span>查看邮件 ({charMails.length})</span>
               </button>
             </div>
           )}
@@ -288,6 +348,96 @@ export function PhoneCheckScreen({
             <div className="p-8 text-center">
               <div className="text-[32px] mb-2">📭</div>
               <div className="text-[13px] txt-dim">暂无朋友圈</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 短信视图 */}
+      {viewMode === 'sms' && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-medium txt-accent">
+              {selectedChar?.name} 的短信
+            </div>
+            <button
+              onClick={() => setViewMode(null)}
+              className="text-[12px] txt-faint tap"
+            >
+              返回
+            </button>
+          </div>
+
+          {charSMS.length > 0 ? (
+            charSMS.map(sms => (
+              <div key={sms.id} className="p-3 glass-strong rounded-xl">
+                <div className="flex items-start gap-2">
+                  <div className="text-[20px]">💬</div>
+                  <div className="flex-1">
+                    <div className="text-[13px] txt-accent font-medium mb-1">
+                      {sms.from || '未知'}
+                    </div>
+                    <div className="text-[12px] txt-dim mb-1">
+                      {sms.messages?.[sms.messages.length - 1]?.content || '无内容'}
+                    </div>
+                    <div className="text-[11px] txt-faint">
+                      {new Date(sms.updatedAt).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-8 text-center">
+              <div className="text-[32px] mb-2">📭</div>
+              <div className="text-[13px] txt-dim">暂无短信</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 邮件视图 */}
+      {viewMode === 'mail' && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-medium txt-accent">
+              {selectedChar?.name} 的邮件
+            </div>
+            <button
+              onClick={() => setViewMode(null)}
+              className="text-[12px] txt-faint tap"
+            >
+              返回
+            </button>
+          </div>
+
+          {charMails.length > 0 ? (
+            charMails.map(mail => (
+              <div key={mail.id} className="p-3 glass-strong rounded-xl">
+                <div className="flex items-start gap-2">
+                  <div className="text-[20px]">📧</div>
+                  <div className="flex-1">
+                    <div className="text-[13px] txt-accent font-medium mb-1">
+                      {mail.subject}
+                    </div>
+                    <div className="text-[11px] txt-faint mb-1">
+                      从 {mail.from} 到 {mail.to}
+                    </div>
+                    <div className="text-[12px] txt-dim mb-1">
+                      {mail.body.substring(0, 100)}
+                      {mail.body.length > 100 ? '...' : ''}
+                    </div>
+                    <div className="text-[11px] txt-faint">
+                      {new Date(mail.ts).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-8 text-center">
+              <div className="text-[32px] mb-2">📭</div>
+              <div className="text-[13px] txt-dim">暂无邮件</div>
             </div>
           )}
         </div>

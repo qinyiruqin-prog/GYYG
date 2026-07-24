@@ -1100,7 +1100,20 @@ export function PhoneShell({
 
     if (open === 'anniversary') return <AnniversaryScreen onBack={goHome} />;
     if (open === 'group_chat') return <GroupChatScreen onBack={goHome} />;
-    if (open === 'phone_check') return <PhoneCheckScreen onBack={goHome} />;
+    if (open === 'phone_check')
+      return (
+        <PhoneCheckScreen
+          api={settings.api}
+          characters={settings.characters}
+          chatThreads={settings.chatThreads}
+          moments={settings.moments}
+          partitions={settings.partitions}
+          smsThreads={settings.smsThreads}
+          mails={settings.mails}
+          activeUserId={settings.activeUserId || undefined}
+          onBack={goHome}
+        />
+      );
     if (open === 'offline_mode') return <OfflineModeScreen onBack={goHome} />;
     if (open === 'couple_space') return <CoupleSpaceScreen onBack={goHome} />;
     if (open === 'home_system') return <HomeSystemScreen onBack={goHome} />;
