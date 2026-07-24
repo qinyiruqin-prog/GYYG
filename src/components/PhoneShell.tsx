@@ -52,6 +52,7 @@ import {
   WeightManageScreen,
   DiscoverScreen,
   AltAccountsScreen,
+  AccountManagerScreen,
   KitchenScreen,
   ClosetScreen,
 } from '../apps/V3NewApps';
@@ -1251,6 +1252,20 @@ export function PhoneShell({
     if (open === 'alt_accounts')
       return (
         <AltAccountsScreen
+          onBack={goHome}
+          users={settings.users}
+          activeUserId={settings.activeUserId}
+          onSwitch={(userId) => {
+            updateSettings({ activeUserId: userId });
+            goHome();
+          }}
+          onCreate={() => setOpen('me')}
+        />
+      );
+
+    if (open === 'account_manager')
+      return (
+        <AccountManagerScreen
           onBack={goHome}
           users={settings.users}
           activeUserId={settings.activeUserId}

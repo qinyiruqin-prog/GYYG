@@ -56,6 +56,7 @@ export const APPS: AppMeta[] = [
   { id: 'weight',         name: '体重管理',   icon: 'Scale',          available: true, emoji: '⚖️' },
   { id: 'discover',       name: '发现',       icon: 'Sparkles',       available: true, emoji: '✨' },
   { id: 'alt_accounts',   name: '小号',       icon: 'Users',          available: true, emoji: '👤' },
+  { id: 'account_manager', name: '账号管理',  icon: 'UserCog',        available: true, emoji: '👥' },
   { id: 'time_perception', name: '时间感知', icon: 'Clock', available: true, emoji: '⏰' },
 
   // 快捷球

@@ -18,8 +18,8 @@ export const defaultSettings = (): AppSettings => ({
     pages: [
       // 第1页 - 11个图标
       ['moments', 'contacts', 'sms', 'mail', 'waimai', 'xiaohongshu', 'novel', 'shop', 'forum', 'calendar', 'worldbook'],
-      // 第2页 - 11个图标（删除alt_accounts）
-      ['generator', 'social', 'truth_or_dare', 'period', 'notes_app', 'weather', 'calculator', 'browser', 'diary', 'wallet', 'memory'],
+      // 第2页 - 12个图标（account_manager在最后）
+      ['generator', 'social', 'truth_or_dare', 'period', 'notes_app', 'weather', 'calculator', 'browser', 'diary', 'wallet', 'memory', 'account_manager'],
       // 第3页 - 14个图标
       ['me', 'anniversary', 'group_chat', 'phone_check', 'couple_space', 'home_system', 'kitchen', 'turtle_soup', 'games', 'weibo', 'twitter', 'weight', 'discover', 'closet', 'time_perception']
     ],
