@@ -1,5 +1,5 @@
-const CACHE_VERSION = 'yangyangji-v2.0';
-const RUNTIME_CACHE = 'yangyangji-runtime';
+const CACHE_VERSION = 'yangyangji-v2.1-20260724';
+const RUNTIME_CACHE = 'yangyangji-runtime-v2.1';
 const ASSETS = [
   '/',
   '/index.html',
