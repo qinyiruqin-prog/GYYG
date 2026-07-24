@@ -34,6 +34,8 @@ export function TwitterScreen({
   const [commentText, setCommentText] = useState('');
   const [detail, setDetail] = useState<SocialPost | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showingTranslation, setShowingTranslation] = useState<{ [key: string]: boolean }>({});
+  const [translating, setTranslating] = useState<{ [key: string]: boolean }>({});
 
   const twitterPosts = posts.filter((p) => p.platform === 'twitter').sort((a, b) => b.ts - a.ts);
 
@@ -159,6 +161,36 @@ export function TwitterScreen({
   const removeImage = (idx: number) => setImages(images.filter((_, i) => i !== idx));
   const removeImageDescription = (idx: number) => setImageDescriptions(imageDescriptions.filter((_, i) => i !== idx));
 
+  // 翻译功能
+  const handleTranslate = async (post: SocialPost) => {
+    if (showingTranslation[post.id]) {
+      // 已经显示翻译，切换回原文
+      setShowingTranslation({ ...showingTranslation, [post.id]: false });
+      return;
+    }
+
+    if (post.translatedContent) {
+      // 已有翻译，直接显示
+      setShowingTranslation({ ...showingTranslation, [post.id]: true });
+      return;
+    }
+
+    // 需要生成翻译
+    setTranslating({ ...translating, [post.id]: true });
+    try {
+      const sys = '你是专业翻译助手。将英文推文翻译成自然流畅的中文，保持原文语气和emoji。只输出翻译结果。';
+      const translated = await askAI(api, sys, `请翻译：${post.content}`, { temperature: 0.3, maxTokens: 500 });
+
+      // 更新帖子的翻译
+      onChange(posts.map(p => p.id === post.id ? { ...p, translatedContent: translated.trim() } : p));
+      setShowingTranslation({ ...showingTranslation, [post.id]: true });
+    } catch (e) {
+      alert(`翻译失败：${(e as Error).message}`);
+    } finally {
+      setTranslating({ ...translating, [post.id]: false });
+    }
+  };
+
   // 详情页
   if (detail) {
     const p = posts.find((x) => x.id === detail.id) ?? detail;
@@ -177,7 +209,17 @@ export function TwitterScreen({
                 <div className="text-[13px] txt-faint">@{p.authorName.toLowerCase().replace(/\s/g, '_')}</div>
               </div>
             </div>
-            <div className="text-[16px] leading-relaxed whitespace-pre-wrap mb-3">{p.content}</div>
+            <div className="text-[16px] leading-relaxed whitespace-pre-wrap mb-3">
+              {showingTranslation[p.id] && p.translatedContent ? p.translatedContent : p.content}
+            </div>
+            {/* 翻译按钮 */}
+            <button
+              onClick={() => handleTranslate(p)}
+              disabled={translating[p.id]}
+              className="text-[13px] text-blue-500 hover:text-blue-600 mb-3 tap disabled:opacity-50"
+            >
+              {translating[p.id] ? '翻译中...' : showingTranslation[p.id] ? '查看原文' : '查看翻译'}
+            </button>
             {(p.images && p.images.length > 0 || p.imageDescriptions && p.imageDescriptions.length > 0) && (
               <div className={`grid gap-2 mb-3 ${(p.images?.length || 0) + (p.imageDescriptions?.length || 0) === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 {p.images?.map((img, i) => (
@@ -271,7 +313,20 @@ export function TwitterScreen({
                       <span className="text-[13px] txt-faint">@{p.authorName.toLowerCase().replace(/\s/g, '_')}</span>
                       <span className="text-[13px] txt-faint">· {new Date(p.ts).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric' })}</span>
                     </div>
-                    <div className="text-[14px] leading-relaxed txt-dim whitespace-pre-wrap mb-2">{p.content}</div>
+                    <div className="text-[14px] leading-relaxed txt-dim whitespace-pre-wrap mb-2">
+                      {showingTranslation[p.id] && p.translatedContent ? p.translatedContent : p.content}
+                    </div>
+                    {/* 翻译按钮 */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTranslate(p);
+                      }}
+                      disabled={translating[p.id]}
+                      className="text-[12px] text-blue-500 hover:text-blue-600 mb-2 tap disabled:opacity-50"
+                    >
+                      {translating[p.id] ? '翻译中...' : showingTranslation[p.id] ? '查看原文' : '查看翻译'}
+                    </button>
                     {(p.images && p.images.length > 0 || p.imageDescriptions && p.imageDescriptions.length > 0) && (
                       <div className={`grid gap-2 mb-2 ${(p.images?.length || 0) + (p.imageDescriptions?.length || 0) === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                         {p.images?.map((img, i) => (

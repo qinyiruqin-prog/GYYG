@@ -527,6 +527,7 @@ export interface SocialPost {
   authorName: string;
   authorAvatar?: string;
   content: string;
+  translatedContent?: string; // 翻译后的内容
   images?: string[];
   imageDescriptions?: string[]; // 图片描述文字（当没有API时显示）
   likes: number;

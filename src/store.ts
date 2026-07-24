@@ -105,77 +105,145 @@ export const defaultSettings = (): AppSettings => ({
     }
   ],
   socialPosts: [
-    // 微博预置帖子
+    // 微博预置帖子 - 真实的长文风格
     {
       id: 'weibo-init-1',
       platform: 'weibo',
       authorId: 'weibo-user-1',
-      authorName: '美食探店家',
+      authorName: '深夜食堂老板娘',
       authorAvatar: '🍜',
-      content: '今天打卡了一家超赞的日料店！新鲜的三文鱼简直入口即化 🍣✨ #美食推荐 #日料',
-      imageDescription: '精致的日式料理拼盘，三文鱼刺身特写',
-      likes: 156,
-      reposts: 23,
+      content: `今天店里来了一位特别的客人，一个人坐在角落里静静地吃着拉面。看她的样子应该是加班到很晚，眼睛里都是疲惫。我给她加了个温泉蛋，她抬起头对我笑了笑，说"谢谢老板娘，这是今天最温暖的时刻"。
+
+其实开这家小店这么多年，见过太多这样的都市人。白天西装革履在写字楼里奔波，深夜一个人来到小店，卸下伪装，享受一碗热腾腾的面。有时候我觉得，我这碗面治愈的不只是肚子，更是那些疲惫的心灵。
+
+生活不易，但总有温暖的瞬间。希望每个深夜回家的你，都能找到属于自己的那碗面🍜❤️
+
+#深夜食堂 #城市温度 #一碗面的故事`,
+      imageDescription: '昏黄灯光下的拉面特写，冒着热气的汤面',
+      likes: 8234,
+      reposts: 1256,
       comments: [
-        { id: 'wb-c1', authorName: '吃货小王', content: '地址在哪？我也想去！', ts: Date.now() - 2 * 3600 * 1000 }
+        { id: 'wb-c1', authorName: '加班狗小王', content: '看哭了...昨晚加班到12点，也是一个人吃的面😭', ts: Date.now() - 2 * 3600 * 1000 },
+        { id: 'wb-c2', authorName: '夜猫子', content: '老板娘这碗面我也想吃！地址在哪？', ts: Date.now() - 3 * 3600 * 1000 },
+        { id: 'wb-c3', authorName: '治愈系博主', content: '这就是人间烟火气啊，有温度的小店才是城市的灵魂', ts: Date.now() - 4 * 3600 * 1000 },
+        { id: 'wb-c4', authorName: '美食探店', content: '转发了！这种有故事的店必须支持', ts: Date.now() - 5 * 3600 * 1000 },
+        { id: 'wb-c5', authorName: '路过的云', content: '深夜的食物总是格外治愈❤️', ts: Date.now() - 6 * 3600 * 1000 }
       ],
       isHot: true,
-      topic: '美食推荐',
+      topic: '深夜食堂',
       ts: Date.now() - 4 * 3600 * 1000
     },
     {
       id: 'weibo-init-2',
       platform: 'weibo',
       authorId: 'weibo-user-2',
-      authorName: '旅行达人',
-      authorAvatar: '✈️',
-      content: '周末去爬山啦！山顶的风景真的太美了，空气清新，心情舒畅 🏔️ #周末去哪玩',
-      imageDescription: '山顶俯瞰城市全景，蓝天白云',
-      likes: 89,
-      reposts: 12,
-      comments: [],
-      topic: '周末去哪玩',
+      authorName: '旅行摄影师Leo',
+      authorAvatar: '📷',
+      content: `今天在西藏拍到了此生最震撼的日出！
+
+凌晨4点就起床，顶着零下的温度爬到山顶。等待的过程中冷得发抖，相机都快冻僵了。但当第一缕阳光穿过云层，照亮雪山的那一刻，所有的辛苦都值了。
+
+这趟西藏之行已经是第15天了，从拉萨到纳木错，从羊卓雍措到珠峰大本营，每一个地方都让我震撼。高反、缺氧、路况艰险...这些都不算什么，因为眼前的美景让一切都变得渺小。
+
+有人问我，为什么要这么辛苦地去旅行？我想说，当你站在世界屋脊，看着太阳从雪山升起，你会明白什么叫做"人生值得"。那种感动，那种震撼，是任何语言都无法形容的。
+
+明天继续前行，下一站：冈仁波齐。期待更多的奇迹🏔️✨
+
+#西藏旅行 #日出 #人生必去的50个地方`,
+      imageDescription: '壮丽的雪山日出，金色阳光洒在雪峰上',
+      likes: 15782,
+      reposts: 3421,
+      comments: [
+        { id: 'wb-c6', authorName: '向往自由', content: '太美了！！！明年一定要去一次西藏', ts: Date.now() - 1 * 3600 * 1000 },
+        { id: 'wb-c7', authorName: '摄影爱好者', content: '请问用的什么相机和镜头？这光影太绝了', ts: Date.now() - 2 * 3600 * 1000 },
+        { id: 'wb-c8', authorName: '高反患者', content: '想去但是怕高反...博主有什么建议吗？', ts: Date.now() - 3 * 3600 * 1000 },
+        { id: 'wb-c9', authorName: '西藏导游小扎西', content: '欢迎来到我的家乡！看到这么多人喜欢西藏真开心', ts: Date.now() - 4 * 3600 * 1000 },
+        { id: 'wb-c10', authorName: '文艺青年', content: '看完立刻想辞职去旅行...但是账户余额劝我冷静', ts: Date.now() - 5 * 3600 * 1000 },
+        { id: 'wb-c11', authorName: '旅行达人', content: '收藏了！准备做攻略', ts: Date.now() - 6 * 3600 * 1000 }
+      ],
+      isHot: true,
+      topic: '西藏旅行',
       ts: Date.now() - 10 * 3600 * 1000
     },
     {
       id: 'weibo-init-3',
       platform: 'weibo',
       authorId: 'weibo-user-3',
-      authorName: '数码科技',
+      authorName: '互联网打工人阿强',
       authorAvatar: '💻',
-      content: '新入手的耳机音质真不错！降噪效果也很棒，推荐给需要的朋友们 🎧',
-      likes: 67,
-      reposts: 8,
+      content: `刚刚被老板叫去谈话，说我这个月KPI没达标...
+
+坐在工位上愣了好久。这个月我加班到深夜无数次，周末也在改bug，项目上线的时候连着72小时没睡。我以为我已经很努力了，但原来在老板眼里，这些都不算什么，只看那个冷冰冰的数字。
+
+想起三年前刚入职的时候，满腔热血，觉得自己一定能在互联网行业闯出一片天。现在呢？头发越来越少，眼袋越来越重，银行卡里的数字增长远远跟不上房租的速度。
+
+有时候真的很想辞职，去做自己喜欢的事情。但是房贷、父母的期待、生活的压力...这些现实把我死死地钉在工位上。
+
+今晚又要加班了。给自己点个外卖吧，奶茶加珍珠，至少给自己一点甜。
+
+致所有还在坚持的打工人：加油，我们都会好起来的💪
+
+#打工人的日常 #互联网加班 #生活不易`,
+      likes: 21453,
+      reposts: 5678,
       comments: [
-        { id: 'wb-c2', authorName: '科技迷', content: '什么牌子的？多少钱？', ts: Date.now() - 5 * 3600 * 1000 }
+        { id: 'wb-c12', authorName: '同样的打工人', content: '兄弟抱抱...我也是，昨天刚被老板骂了一顿😭', ts: Date.now() - 1 * 3600 * 1000 },
+        { id: 'wb-c13', authorName: '职场HR', content: '其实很多时候不是你不够努力，而是公司的考核机制有问题', ts: Date.now() - 2 * 3600 * 1000 },
+        { id: 'wb-c14', authorName: '前互联网人', content: '我已经辞职了，现在在老家开了个小店，虽然赚得少但是心情好多了', ts: Date.now() - 3 * 3600 * 1000 },
+        { id: 'wb-c15', authorName: '励志博主', content: '坚持住！每个人都有低谷期，熬过去就是晴天', ts: Date.now() - 4 * 3600 * 1000 },
+        { id: 'wb-c16', authorName: '资深程序员', content: '做了10年程序员的我想说：身体最重要，别为了工作毁了健康', ts: Date.now() - 5 * 3600 * 1000 },
+        { id: 'wb-c17', authorName: '奶茶爱好者', content: '奶茶加珍珠！这就是打工人的倔强', ts: Date.now() - 6 * 3600 * 1000 },
+        { id: 'wb-c18', authorName: '跳槽达人', content: '建议考虑换个公司，有些公司文化确实有毒', ts: Date.now() - 7 * 3600 * 1000 }
       ],
+      isHot: true,
+      topic: '打工人的日常',
       ts: Date.now() - 15 * 3600 * 1000
     },
-    // 推特预置帖子
+    // 推特预置帖子 - 英文，需要翻译
     {
       id: 'twitter-init-1',
       platform: 'twitter',
       authorId: 'twitter-user-1',
-      authorName: 'CodeNinja',
-      authorAvatar: '👨‍💻',
-      content: 'Just shipped a new feature! 🚀 Feeling productive today #coding #developer',
-      likes: 42,
-      reposts: 7,
-      comments: [],
+      authorName: 'Sarah Chen',
+      authorAvatar: '👩‍💻',
+      content: `Just finished a 12-hour coding marathon and finally fixed that bug that's been haunting me for 3 days!
+
+The feeling when your code finally works is indescribable. It's like solving a puzzle that's been taunting you, and suddenly everything clicks into place.
+
+To all the developers out there struggling with a tough problem: don't give up! Take a break, clear your mind, and come back with fresh eyes. Sometimes the solution is simpler than you think.
+
+#coding #developer #nevergiveup`,
+      likes: 3421,
+      reposts: 892,
+      comments: [
+        { id: 'tw-c1', authorName: 'DevMaster', content: 'Been there! That feeling is the best part of coding 🚀', ts: Date.now() - 1 * 3600 * 1000 },
+        { id: 'tw-c2', authorName: 'CodeNewbie', content: 'I needed to hear this today. Currently stuck on a React problem', ts: Date.now() - 2 * 3600 * 1000 },
+        { id: 'tw-c3', authorName: 'TechLead', content: 'Great advice! Taking breaks is underrated in our industry', ts: Date.now() - 3 * 3600 * 1000 },
+        { id: 'tw-c4', authorName: 'PythonDev', content: 'Congrats! What was the bug about?', ts: Date.now() - 4 * 3600 * 1000 }
+      ],
       ts: Date.now() - 3 * 3600 * 1000
     },
     {
       id: 'twitter-init-2',
       platform: 'twitter',
       authorId: 'twitter-user-2',
-      authorName: 'CoffeeLover',
+      authorName: 'Coffee Chronicles',
       authorAvatar: '☕',
-      content: 'Morning coffee hits different when the sun is shining ☀️✨',
-      imageDescription: '一杯精美的拿铁咖啡，阳光洒在桌面上',
-      likes: 128,
-      reposts: 15,
+      content: `There's something magical about that first sip of morning coffee ☕✨
+
+The aroma fills the room, the warmth spreads through your hands, and suddenly the world doesn't seem so overwhelming anymore. It's not just a drink - it's a ritual, a moment of peace before the chaos begins.
+
+What's your coffee order? Mine: oat milk latte with an extra shot 💫
+
+#coffee #morningritual #coffeelover`,
+      imageDescription: '精致的咖啡拉花艺术，心形图案',
+      likes: 5632,
+      reposts: 1203,
       comments: [
-        { id: 'tw-c1', authorName: 'BaristaLife', content: 'Looks amazing! ☕', ts: Date.now() - 1 * 3600 * 1000 }
+        { id: 'tw-c5', authorName: 'BaristaLife', content: 'As a barista, this warms my heart! ❤️☕', ts: Date.now() - 1 * 3600 * 1000 },
+        { id: 'tw-c6', authorName: 'TeaLover', content: 'I\'m more of a tea person but I respect the coffee culture!', ts: Date.now() - 2 * 3600 * 1000 },
+        { id: 'tw-c7', authorName: 'CoffeAddict', content: 'Iced americano, no matter the weather 😎', ts: Date.now() - 3 * 3600 * 1000 },
+        { id: 'tw-c8', authorName: 'MorningPerson', content: 'Coffee is the reason I wake up every day!', ts: Date.now() - 4 * 3600 * 1000 }
       ],
       ts: Date.now() - 6 * 3600 * 1000
     },
@@ -183,12 +251,27 @@ export const defaultSettings = (): AppSettings => ({
       id: 'twitter-init-3',
       platform: 'twitter',
       authorId: 'twitter-user-3',
-      authorName: 'MusicVibes',
-      authorAvatar: '🎵',
-      content: 'New playlist for the weekend! Perfect for chilling 🎶 #music #weekend',
-      likes: 91,
-      reposts: 23,
-      comments: [],
+      authorName: 'Travel Diaries',
+      authorAvatar: '✈️',
+      content: `Just landed in Tokyo! 🇯🇵
+
+This is my 5th time visiting Japan and it never gets old. The perfect blend of ancient tradition and modern innovation, the incredible food scene, the politeness of people - everything about this country amazes me.
+
+Planning to visit: Senso-ji Temple, TeamLab Borderless, and of course, lots of ramen spots 🍜
+
+Any Tokyo recommendations from locals? Drop them below! 👇
+
+#Tokyo #Japan #TravelDiaries`,
+      imageDescription: '东京塔夜景，霓虹灯闪烁的城市',
+      likes: 8934,
+      reposts: 2156,
+      comments: [
+        { id: 'tw-c9', authorName: 'TokyoLocal', content: 'Try the ramen shop in Shibuya - Ichiran! Best in the city', ts: Date.now() - 1 * 3600 * 1000 },
+        { id: 'tw-c10', authorName: 'FoodieJapan', content: 'Don\'t miss the fish market breakfast at Tsukiji!', ts: Date.now() - 2 * 3600 * 1000 },
+        { id: 'tw-c11', authorName: 'JapanGuide', content: 'TeamLab is incredible! Book tickets in advance', ts: Date.now() - 3 * 3600 * 1000 },
+        { id: 'tw-c12', authorName: 'TravelBlogger', content: 'So jealous! Japan is on my bucket list', ts: Date.now() - 4 * 3600 * 1000 },
+        { id: 'tw-c13', authorName: 'SushiLover', content: 'You have to try the sushi at Sukiyabashi Jiro!', ts: Date.now() - 5 * 3600 * 1000 }
+      ],
       ts: Date.now() - 9 * 3600 * 1000
     }
   ],
