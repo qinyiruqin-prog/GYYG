@@ -102,14 +102,16 @@ export interface RichReply {
   imagePrompt?: string;
   sendVoice?: boolean;
   voiceText?: string;
+  shouldRecall?: boolean; // 是否要撤回这条消息
+  recallReason?: string; // 撤回原因（内心想法）
 }
 export async function callChatRich(chat: ChatApiConfig, messages: ChatMsg[], opts?: { temperature?: number; maxTokens?: number }): Promise<RichReply> {
   const sys: ChatMsg = {
     role: 'system',
     content:
       '你是角色扮演聊天系统。请在回复时输出 JSON，字段：\n' +
-      '{"content":"回复正文","innerThought":"角色内心真实想法（用户看不到，除非长按）","sendImage":false,"imagePrompt":"如果配图就写英文绘图提示词","sendVoice":false,"voiceText":"如果发语音就写语音对应的中文文字"}\n' +
-      '规则：innerThought 总是给出，体现角色真实心理，可能和表面 content 不同。sendImage/sendVoice 根据对话自然节奏偶尔为 true（不要每次都发）。imagePrompt 只在 sendImage 时填。voiceText 只在 sendVoice 时填。只输出 JSON。',
+      '{"content":"回复正文","innerThought":"角色内心真实想法（用户看不到，除非长按）","sendImage":false,"imagePrompt":"如果配图就写英文绘图提示词","sendVoice":false,"voiceText":"如果发语音就写语音对应的中文文字","shouldRecall":false,"recallReason":"如果想撤回就写原因"}\n' +
+      '规则：innerThought 总是给出，体现角色真实心理，可能和表面 content 不同。sendImage/sendVoice 根据对话自然节奏偶尔为 true（不要每次都发）。imagePrompt 只在 sendImage 时填。voiceText 只在 sendVoice 时填。shouldRecall 只在线上模式且想撤回时为 true（比如说错话、太尴尬、后悔了），线下模式禁止撤回。只输出 JSON。',
   };
   const raw = await callChat(chat, [sys, ...messages], { temperature: opts?.temperature ?? 0.85, maxTokens: opts?.maxTokens ?? 800 });
   try {

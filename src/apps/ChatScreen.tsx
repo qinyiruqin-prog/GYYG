@@ -1205,13 +1205,16 @@ function ChatConversation({
     const mode = thread.interactionMode || 'online';
     if (mode === 'offline') {
       sys += `\n\n[线下模式]
-当前是线下模式，模拟现实见面场景。你可以使用动作描写，用 *动作* 或（动作）的格式。
-例如："你好呀！*微笑着挥手*" 或 "嗯...(低头思考)"
-你们正面对面交流，可以有肢体语言、表情、动作等现实互动。`;
+当前是线下模式，模拟现实见面场景。你可以使用动作描写，用 (动作) 的格式。
+例如："你好呀！(微笑着挥手)" 或 "嗯...\n\n(低头思考)"
+动作用括号包裹，动作和语言之间用空行分隔。
+你们正面对面交流，可以有肢体语言、表情、动作等现实互动。
+注意：线下模式中你说出去的话无法撤回，请谨慎表达。`;
     } else {
       sys += `\n\n[线上模式]
 当前是线上模式，模拟微信/QQ等聊天软件。禁止使用动作描写，只能发送文字、表情、图片、语音等线上内容。
-回复要符合线上聊天习惯，简洁自然。`;
+回复要符合线上聊天习惯，简洁自然。
+你可以撤回不合适的消息，但请谨慎使用。`;
     }
 
     if (thread.charAltName) {
@@ -1368,8 +1371,8 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
         const messagesWithAssistant = [...latestMessages, assistantMsg];
         onSend(messagesWithAssistant);
 
-        // 角色主动撤回消息（5%概率，3-8秒后）
-        if (Math.random() < 0.05) {
+        // 角色智能撤回消息（仅线上模式，由AI判断是否撤回）
+        if (currentMode !== 'offline' && rich.shouldRecall) {
           const recallDelay = 3000 + Math.random() * 5000; // 3-8秒
           setTimeout(() => {
             const recalled: ChatMessage = {
@@ -1377,6 +1380,7 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
               recalled: true,
               recalledContent: assistantMsg.content,
               content: `${thread.charAltName || char.name} 撤回了一条消息`,
+              innerThought: rich.recallReason || rich.innerThought,
             };
             const updated = messagesWithAssistant.map((m) =>
               m.id === assistantMsg.id ? recalled : m
