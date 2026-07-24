@@ -73,6 +73,14 @@ export function TwitterScreen({
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
+  // 推特固定黑色主题
+  const bgColor = 'bg-black';
+  const textColor = 'text-white';
+  const secondaryTextColor = 'text-gray-400';
+  const borderColor = 'border-gray-800';
+  const hoverBg = 'hover:bg-gray-900';
+  const inputBg = 'bg-gray-900';
+
   const handleRefresh = () => {
     setRefreshing(true);
     setTimeout(() => {
@@ -97,18 +105,18 @@ export function TwitterScreen({
 
   return (
     <AppScreen title="X" onBack={onBack}>
-      <div className="flex flex-col h-full">
+      <div className={`flex flex-col h-full ${bgColor}`}>
         {/* 搜索栏 */}
-        <div className="p-3 bg-white/5 border-b border-white/10">
+        <div className={`p-3 ${borderColor} border-b`}>
           <div className="flex items-center gap-2">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${secondaryTextColor}`} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search"
-                className="w-full bg-white/10 rounded-full pl-10 pr-4 py-2 text-sm text-white placeholder:text-white/40"
+                className={`w-full ${inputBg} rounded-full pl-10 pr-4 py-2 text-sm ${textColor} placeholder-gray-500`}
               />
             </div>
             <button className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors">
@@ -118,11 +126,11 @@ export function TwitterScreen({
         </div>
 
         {/* 标签栏 */}
-        <div className="flex border-b border-white/10 bg-white/5">
+        <div className={`flex ${borderColor} border-b`}>
           <button
             onClick={() => setTab('foryou')}
             className={`flex-1 py-3 text-sm font-medium relative ${
-              tab === 'foryou' ? 'text-white' : 'text-white/60'
+              tab === 'foryou' ? textColor : secondaryTextColor
             }`}
           >
             For you
@@ -133,7 +141,7 @@ export function TwitterScreen({
           <button
             onClick={() => setTab('following')}
             className={`flex-1 py-3 text-sm font-medium relative ${
-              tab === 'following' ? 'text-white' : 'text-white/60'
+              tab === 'following' ? textColor : secondaryTextColor
             }`}
           >
             Following
@@ -146,31 +154,31 @@ export function TwitterScreen({
         {/* 内容区域 */}
         <div className="flex-1 overflow-y-auto">
           {/* 刷新按钮 */}
-          <div className="p-3 border-b border-white/10 flex justify-end">
+          <div className={`p-3 ${borderColor} border-b flex justify-end`}>
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors disabled:opacity-50"
+              className={`p-2 ${hoverBg} rounded-full transition-colors disabled:opacity-50`}
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${textColor} ${refreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
 
           {/* 帖子列表 */}
           {filteredPosts.length === 0 ? (
-            <div className="p-8 text-center text-white/40">
+            <div className={`p-8 text-center ${secondaryTextColor}`}>
               {searchQuery ? 'No results found' : 'No posts yet'}
             </div>
           ) : (
             filteredPosts.map(post => (
-              <div key={post.id} className="p-4 border-b border-white/10 hover:bg-white/5 transition-colors">
+              <div key={post.id} className={`p-4 ${borderColor} border-b ${hoverBg} transition-colors`}>
                 {/* 用户信息 */}
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">{post.authorAvatar}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-white">{post.authorName}</span>
-                      <span className="text-white/40 text-sm">
+                      <span className={`font-medium ${textColor}`}>{post.authorName}</span>
+                      <span className={`${secondaryTextColor} text-sm`}>
                         · {new Date(post.ts).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric'
@@ -179,19 +187,19 @@ export function TwitterScreen({
                     </div>
 
                     {/* 内容 */}
-                    <div className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap mb-3">
+                    <div className={`${textColor} text-sm leading-relaxed whitespace-pre-wrap mb-3`}>
                       {post.content}
                     </div>
 
                     {/* 互动按钮 */}
-                    <div className="flex items-center justify-between text-white/60 max-w-md">
-                      <button className="flex items-center gap-2 text-sm hover:text-blue-500 transition-colors group">
+                    <div className={`flex items-center justify-between ${secondaryTextColor} max-w-md`}>
+                      <button className={`flex items-center gap-2 text-sm hover:text-blue-500 transition-colors group`}>
                         <div className="p-2 rounded-full group-hover:bg-blue-500/10">
                           <MessageCircle className="w-4 h-4" />
                         </div>
                         <span>{post.comments?.length || 0}</span>
                       </button>
-                      <button className="flex items-center gap-2 text-sm hover:text-green-500 transition-colors group">
+                      <button className={`flex items-center gap-2 text-sm hover:text-green-500 transition-colors group`}>
                         <div className="p-2 rounded-full group-hover:bg-green-500/10">
                           <Repeat2 className="w-4 h-4" />
                         </div>
@@ -199,14 +207,14 @@ export function TwitterScreen({
                       </button>
                       <button
                         onClick={() => handleLike(post.id)}
-                        className="flex items-center gap-2 text-sm hover:text-pink-500 transition-colors group"
+                        className={`flex items-center gap-2 text-sm hover:text-pink-500 transition-colors group`}
                       >
                         <div className="p-2 rounded-full group-hover:bg-pink-500/10">
                           <Heart className="w-4 h-4" />
                         </div>
                         <span>{post.likes}</span>
                       </button>
-                      <button className="flex items-center gap-2 text-sm hover:text-blue-500 transition-colors group">
+                      <button className={`flex items-center gap-2 text-sm hover:text-blue-500 transition-colors group`}>
                         <div className="p-2 rounded-full group-hover:bg-blue-500/10">
                           <Share2 className="w-4 h-4" />
                         </div>

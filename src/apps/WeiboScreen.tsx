@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, MessageCircle, Share2, Search, Plus, TrendingUp, RefreshCw } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Search, Plus, RefreshCw } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import type { ApiConfig, SocialPost, UserIdentity, Character } from '../types';
 
@@ -11,19 +11,21 @@ const INITIAL_POSTS: SocialPost[] = [
     authorId: 'npc-chef',
     authorName: '深夜食堂老板娘',
     authorAvatar: '🍜',
-    content: `今天店里来了一位特别的客人，一个人坐在角落里静静地吃着拉面。看她的样子应该是加班到很晚，眼睛里都是疲惫。我给她加了个温泉蛋，她抬起头对我笑了笑，说"谢谢老板娘，这是今天最温暖的时刻"。
+    content: `今天店里来了一位特别的客人，一个人坐在角落里静静地吃着拉面。看着她的背影，我想起了很多年前的自己。
 
-其实开这家小店这么多年，见过太多这样的都市人。白天西装革履在写字楼里奔波，深夜一个人来到小店，卸下伪装，享受一碗热腾腾的面。有时候我觉得，我这碗面治愈的不只是肚子，更是那些疲惫的心灵。
+那时候我刚来东京，举目无亲，每天下班后都会找一家小食堂，点一碗热乎乎的面。不是因为饿，而是需要那种温暖的感觉。食物有一种神奇的力量，它能让人想起家，想起那些温暖的记忆。
 
-生活不易，但总有温暖的瞬间。希望每个深夜回家的你，都能找到属于自己的那碗面🍜❤️
+后来我开了这家店，每晚十二点到早上七点营业。很多人问我为什么选择这个时间段？因为深夜是最需要温暖的时刻。那些加班到深夜的白领，那些失眠的人，那些刚分手的恋人，他们需要的不只是食物，更是一份理解和陪伴。
 
-#深夜食堂 #城市温度 #一碗面的故事`,
-    likes: 1256,
+每个人都有自己的故事，每碗面里都藏着一段人生。这就是我的深夜食堂。🌙✨
+
+#深夜食堂 #东京美食 #人生百味`,
+    likes: 15678,
     comments: [],
-    shares: 8234,
-    ts: Date.now() - 6 * 60 * 60 * 1000,
+    shares: 4521,
+    ts: Date.now() - 5 * 60 * 60 * 1000,
     images: [],
-    topics: ['深夜食堂']
+    topics: ['深夜食堂', '东京美食']
   },
   {
     id: 'weibo-preset-2',
@@ -31,11 +33,11 @@ const INITIAL_POSTS: SocialPost[] = [
     authorId: 'npc-photographer',
     authorName: '旅行摄影师Leo',
     authorAvatar: '📷',
-    content: `今天在西藏拍到了此生最震撼的日出！
+    content: `西藏行第15天 - 在海拔5200米的地方看日出 🌅
 
-凌晨4点就起床，顶着零下的温度爬到山顶。等待的过程中冷得发抖，相机都快冻僵了。但当第一缕阳光穿过云层，照亮雪山的那一刻，所有的辛苦都值了。
+凌晨4点起床，零下15度的温度让人瑟瑟发抖，但当太阳从珠峰背后缓缓升起的那一刻，所有的辛苦都值得了。金色的阳光洒在雪山上，整个世界仿佛镀上了一层金边，那种美，震撼到让人说不出话来。
 
-这趟西藏之行已经是第15天了，从拉萨到纳木错，从羊卓雍措到珠峰大本营，每一个地方都让我震撼。高反、缺氧、路况艰险...这些都不算什么，因为眼前的美景让一切都变得渺小。
+这趟旅程走了15天，从拉萨到纳木错，从羊卓雍错到珠峰大本营。高原反应、恶劣的天气、艰苦的住宿条件，这些都是旅途的一部分。但也正是这些挑战，让这次旅行变得如此特别，让我对"在路上"这三个字有了更深的理解。
 
 有人问我，为什么要这么辛苦地去旅行？我想说，当你站在世界屋脊，看着太阳从雪山升起，你会明白什么叫做"人生值得"。那种感动，那种震撼，是任何语言都无法形容的。
 
@@ -66,6 +68,13 @@ export function WeiboScreen({
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
+  // 微博固定白色主题
+  const bgColor = 'bg-white';
+  const textColor = 'text-gray-900';
+  const secondaryTextColor = 'text-gray-600';
+  const borderColor = 'border-gray-200';
+  const hoverBg = 'hover:bg-gray-50';
+
   const handleRefresh = () => {
     setRefreshing(true);
     setTimeout(() => {
@@ -90,21 +99,21 @@ export function WeiboScreen({
 
   return (
     <AppScreen title="微博" onBack={onBack}>
-      <div className="flex flex-col h-full">
+      <div className={`flex flex-col h-full ${bgColor}`}>
         {/* 搜索栏 */}
-        <div className="p-3 bg-white/5 border-b border-white/10">
+        <div className={`p-3 ${borderColor} border-b`}>
           <div className="flex items-center gap-2">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${secondaryTextColor}`} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索微博、用户、话题"
-                className="w-full bg-white/10 rounded-full pl-10 pr-4 py-2 text-sm text-white placeholder:text-white/40"
+                className={`w-full bg-gray-100 rounded-full pl-10 pr-4 py-2 text-sm ${textColor} placeholder-gray-500`}
               />
             </div>
-            <button className="px-4 py-2 bg-red-500 text-white rounded-full text-sm font-medium flex items-center gap-1">
+            <button className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-full text-sm font-medium flex items-center gap-1 transition-colors">
               <Plus className="w-4 h-4" />
               发微博
             </button>
@@ -112,78 +121,68 @@ export function WeiboScreen({
         </div>
 
         {/* 标签栏 */}
-        <div className="flex border-b border-white/10 bg-white/5">
+        <div className={`flex ${borderColor} border-b`}>
           <button
             onClick={() => setTab('home')}
             className={`flex-1 py-3 text-sm font-medium relative ${
-              tab === 'home' ? 'text-red-500' : 'text-white/60'
+              tab === 'home' ? 'text-orange-500' : secondaryTextColor
             }`}
           >
             首页
             {tab === 'home' && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-red-500" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-orange-500" />
             )}
           </button>
           <button
             onClick={() => setTab('trending')}
             className={`flex-1 py-3 text-sm font-medium relative ${
-              tab === 'trending' ? 'text-red-500' : 'text-white/60'
+              tab === 'trending' ? 'text-orange-500' : secondaryTextColor
             }`}
           >
-            <div className="flex items-center justify-center gap-1">
-              <TrendingUp className="w-4 h-4" />
-              热搜
-            </div>
+            热搜
             {tab === 'trending' && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-red-500" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-orange-500" />
             )}
           </button>
         </div>
 
         {/* 内容区域 */}
         <div className="flex-1 overflow-y-auto">
-          {tab === 'home' && (
-            <div>
-              {/* 刷新按钮 */}
-              <div className="p-3 border-b border-white/10 flex justify-end">
-                <button
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                </button>
-              </div>
+          {/* 刷新按钮 */}
+          <div className={`p-3 ${borderColor} border-b flex justify-end`}>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className={`p-2 ${hoverBg} rounded-full transition-colors disabled:opacity-50`}
+            >
+              <RefreshCw className={`w-4 h-4 ${textColor} ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
 
-              {/* 帖子列表 */}
-              {filteredPosts.length === 0 ? (
-                <div className="p-8 text-center text-white/40">
-                  {searchQuery ? '没有找到相关内容' : '还没有微博'}
-                </div>
-              ) : (
-                filteredPosts.map(post => (
-                  <div key={post.id} className="p-4 border-b border-white/10">
-                    {/* 用户信息 */}
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="text-2xl">{post.authorAvatar}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-white">{post.authorName}</span>
-                          <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded">热</span>
-                        </div>
-                        <div className="text-xs text-white/40 mt-1">
-                          {new Date(post.ts).toLocaleString('zh-CN', {
-                            month: 'numeric',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                      </div>
+          {/* 帖子列表 */}
+          {filteredPosts.length === 0 ? (
+            <div className={`p-8 text-center ${secondaryTextColor}`}>
+              {searchQuery ? '没有找到相关内容' : '暂无微博'}
+            </div>
+          ) : (
+            filteredPosts.map(post => (
+              <div key={post.id} className={`p-4 ${borderColor} border-b ${hoverBg} transition-colors`}>
+                {/* 用户信息 */}
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">{post.authorAvatar}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`font-medium ${textColor}`}>{post.authorName}</span>
+                      <span className={`${secondaryTextColor} text-xs`}>
+                        {new Date(post.ts).toLocaleDateString('zh-CN', {
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </span>
                     </div>
 
                     {/* 内容 */}
-                    <div className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap mb-3">
+                    <div className={`${textColor} text-sm leading-relaxed whitespace-pre-wrap mb-3`}>
                       {post.content}
                     </div>
 
@@ -191,13 +190,19 @@ export function WeiboScreen({
                     {post.topics && post.topics.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {post.topics.map((topic, idx) => (
-                          <span key={idx} className="text-blue-400 text-sm">#{topic}</span>
+                          <span key={idx} className="text-xs text-orange-500 bg-orange-50 px-2 py-1 rounded">
+                            #{topic}
+                          </span>
                         ))}
                       </div>
                     )}
 
                     {/* 互动按钮 */}
-                    <div className="flex items-center gap-6 text-white/60">
+                    <div className={`flex items-center gap-6 ${secondaryTextColor}`}>
+                      <button className="flex items-center gap-1 text-sm hover:text-blue-500 transition-colors">
+                        <MessageCircle className="w-4 h-4" />
+                        <span>{post.comments?.length || 0}</span>
+                      </button>
                       <button
                         onClick={() => handleLike(post.id)}
                         className="flex items-center gap-1 text-sm hover:text-red-500 transition-colors"
@@ -205,27 +210,15 @@ export function WeiboScreen({
                         <Heart className="w-4 h-4" />
                         <span>{post.likes}</span>
                       </button>
-                      <button className="flex items-center gap-1 text-sm hover:text-blue-500 transition-colors">
-                        <MessageCircle className="w-4 h-4" />
-                        <span>{post.comments?.length || 0}</span>
-                      </button>
                       <button className="flex items-center gap-1 text-sm hover:text-green-500 transition-colors">
                         <Share2 className="w-4 h-4" />
-                        <span>{post.shares}</span>
+                        <span>{post.shares || 0}</span>
                       </button>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {tab === 'trending' && (
-            <div className="p-4">
-              <div className="text-center text-white/40 py-8">
-                热搜功能开发中...
+                </div>
               </div>
-            </div>
+            ))
           )}
         </div>
       </div>
