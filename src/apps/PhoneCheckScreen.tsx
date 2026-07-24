@@ -34,14 +34,9 @@ export function PhoneCheckScreen({
     caught: boolean;
     reaction?: string;
   } | null>(null);
-  const [viewMode, setViewMode] = useState<'chats' | 'moments' | 'sms' | 'mail' | null>(null);
+  const [viewMode, setViewMode] = useState<'chats' | 'moments' | 'sms' | 'mail' | 'browser' | 'social' | 'shop' | 'wallet' | null>(null);
 
   const selectedChar = characters.find(c => c.id === selectedCharId);
-
-  // 获取角色所在的分组
-  const getCharPartition = (charId: string) => {
-    return partitions.find(p => p.charIds.includes(charId));
-  };
 
   const handleCheck = async () => {
     if (!selectedCharId || !selectedChar) return;
@@ -49,20 +44,17 @@ export function PhoneCheckScreen({
     setChecking(true);
     setCheckResult(null);
 
-    // 模拟检查过程
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // 30%概率被发现
     const caught = Math.random() < 0.3;
 
     try {
       if (caught) {
-        // 生成AI反应
         const prompt = `你是${selectedChar.name}，你发现有人在偷看你的手机。
 
 角色人设：${selectedChar.persona}
 
-请生成一个简短的反应（1-2句话），表达你的情绪和态度。可以是生气、尴尬、调侃、无奈等。`;
+请生成一个简短的反应（1-2句话），表达你的情绪和态度。`;
 
         const reaction = await askAI(api, selectedChar.persona, prompt, { temperature: 0.9, maxTokens: 100 });
 
@@ -89,16 +81,9 @@ export function PhoneCheckScreen({
     }
   };
 
-  // 获取选中角色的聊天记录
   const charChats = chatThreads.filter(t => t.characterId === selectedCharId);
-
-  // 获取选中角色的朋友圈
   const charMoments = moments.filter(m => m.characterId === selectedCharId);
-
-  // 获取选中角色的短信（模拟）
   const charSMS = smsThreads.filter(s => s.characterId === selectedCharId);
-
-  // 获取选中角色的邮件（模拟）
   const charMails = mails.filter(m => m.from === selectedChar?.name || m.to === selectedChar?.name);
 
   return (
@@ -107,7 +92,7 @@ export function PhoneCheckScreen({
       <div className="mb-4 p-4 glass-strong rounded-2xl">
         <div className="text-[13px] font-medium mb-2 txt-accent">🔍 查手机功能</div>
         <div className="text-[12px] txt-faint space-y-1">
-          <div>• 偷偷查看角色的聊天记录、朋友圈、短信、邮件</div>
+          <div>• 偷偷查看角色的聊天、朋友圈、短信、邮件、浏览器、社交媒体、购物记录、钱包等</div>
           <div>• <span className="text-red-400">有被发现的风险！</span>被发现概率：30%</div>
           <div>• 被发现后，AI会生成角色的真实反应</div>
           <div>• 可能影响你和角色的关系</div>
@@ -122,22 +107,31 @@ export function PhoneCheckScreen({
         <>
           {/* 选择角色 */}
           <div className="text-[13px] font-medium mb-2 txt-accent">选择要查看的角色</div>
-          <ListGroup>
-            {characters.map(char => (
-              <Row
-                key={char.id}
-                icon={char.avatar || '👤'}
-                label={char.name}
-                hint={char.signature}
-                onClick={() => setSelectedCharId(char.id)}
-                right={
-                  selectedCharId === char.id ? (
-                    <span className="text-[var(--accent)]">✓</span>
-                  ) : null
-                }
-              />
-            ))}
-          </ListGroup>
+
+          {characters.length === 0 ? (
+            <div className="p-8 text-center glass-strong rounded-2xl">
+              <div className="text-[32px] mb-2">👤</div>
+              <div className="text-[13px] txt-dim">暂无角色</div>
+              <div className="text-[11px] txt-faint mt-1">请先创建角色</div>
+            </div>
+          ) : (
+            <ListGroup>
+              {characters.map(char => (
+                <Row
+                  key={char.id}
+                  icon={char.avatar || '👤'}
+                  label={char.name}
+                  hint={char.signature}
+                  onClick={() => setSelectedCharId(char.id)}
+                  right={
+                    selectedCharId === char.id ? (
+                      <span className="text-[var(--accent)]">✓</span>
+                    ) : null
+                  }
+                />
+              ))}
+            </ListGroup>
+          )}
 
           {/* 查看按钮 */}
           {selectedCharId && (
@@ -166,7 +160,6 @@ export function PhoneCheckScreen({
       {checkResult && !viewMode && (
         <div className="space-y-4">
           {checkResult.caught ? (
-            /* 被发现了 */
             <div className="p-4 bg-red-500/10 border-2 border-red-500/30 rounded-2xl">
               <div className="text-center mb-3">
                 <div className="text-[48px] mb-2">😱</div>
@@ -188,7 +181,6 @@ export function PhoneCheckScreen({
               </div>
             </div>
           ) : (
-            /* 成功查看 */
             <div className="p-4 bg-green-500/10 border-2 border-green-500/30 rounded-2xl">
               <div className="text-center mb-3">
                 <div className="text-[48px] mb-2">🤫</div>
@@ -200,7 +192,6 @@ export function PhoneCheckScreen({
             </div>
           )}
 
-          {/* 查看选项 */}
           {!checkResult.caught && (
             <div className="space-y-2">
               <button
@@ -208,7 +199,7 @@ export function PhoneCheckScreen({
                 className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent flex items-center justify-center gap-2"
               >
                 <span className="text-[20px]">💬</span>
-                <span>查看聊天记录 ({charChats.length})</span>
+                <span>聊天记录 ({charChats.length})</span>
               </button>
 
               <button
@@ -216,7 +207,7 @@ export function PhoneCheckScreen({
                 className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent flex items-center justify-center gap-2"
               >
                 <span className="text-[20px]">📷</span>
-                <span>查看朋友圈 ({charMoments.length})</span>
+                <span>朋友圈 ({charMoments.length})</span>
               </button>
 
               <button
@@ -224,7 +215,7 @@ export function PhoneCheckScreen({
                 className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent flex items-center justify-center gap-2"
               >
                 <span className="text-[20px]">💬</span>
-                <span>查看短信 ({charSMS.length})</span>
+                <span>短信 ({charSMS.length})</span>
               </button>
 
               <button
@@ -232,7 +223,39 @@ export function PhoneCheckScreen({
                 className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent flex items-center justify-center gap-2"
               >
                 <span className="text-[20px]">📧</span>
-                <span>查看邮件 ({charMails.length})</span>
+                <span>邮件 ({charMails.length})</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('browser')}
+                className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent flex items-center justify-center gap-2"
+              >
+                <span className="text-[20px]">🌐</span>
+                <span>浏览器历史</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('social')}
+                className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent flex items-center justify-center gap-2"
+              >
+                <span className="text-[20px]">📱</span>
+                <span>社交媒体（微博/推特/论坛）</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('shop')}
+                className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent flex items-center justify-center gap-2"
+              >
+                <span className="text-[20px]">🛒</span>
+                <span>商城购买记录</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('wallet')}
+                className="w-full py-3 glass-strong rounded-xl font-medium tap txt-accent flex items-center justify-center gap-2"
+              >
+                <span className="text-[20px]">💰</span>
+                <span>钱包 (余额: ¥{selectedChar?.balance || 0})</span>
               </button>
             </div>
           )}
@@ -440,6 +463,107 @@ export function PhoneCheckScreen({
               <div className="text-[13px] txt-dim">暂无邮件</div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 浏览器历史 */}
+      {viewMode === 'browser' && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-medium txt-accent">
+              {selectedChar?.name} 的浏览器历史
+            </div>
+            <button
+              onClick={() => setViewMode(null)}
+              className="text-[12px] txt-faint tap"
+            >
+              返回
+            </button>
+          </div>
+
+          <div className="p-8 text-center">
+            <div className="text-[32px] mb-2">🌐</div>
+            <div className="text-[13px] txt-dim">浏览器历史功能开发中</div>
+            <div className="text-[11px] txt-faint mt-1">即将支持查看角色的浏览记录</div>
+          </div>
+        </div>
+      )}
+
+      {/* 社交媒体 */}
+      {viewMode === 'social' && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-medium txt-accent">
+              {selectedChar?.name} 的社交媒体
+            </div>
+            <button
+              onClick={() => setViewMode(null)}
+              className="text-[12px] txt-faint tap"
+            >
+              返回
+            </button>
+          </div>
+
+          <div className="p-8 text-center">
+            <div className="text-[32px] mb-2">📱</div>
+            <div className="text-[13px] txt-dim">社交媒体功能开发中</div>
+            <div className="text-[11px] txt-faint mt-1">即将支持查看微博、推特、论坛发帖</div>
+          </div>
+        </div>
+      )}
+
+      {/* 商城记录 */}
+      {viewMode === 'shop' && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-medium txt-accent">
+              {selectedChar?.name} 的购买记录
+            </div>
+            <button
+              onClick={() => setViewMode(null)}
+              className="text-[12px] txt-faint tap"
+            >
+              返回
+            </button>
+          </div>
+
+          <div className="p-8 text-center">
+            <div className="text-[32px] mb-2">🛒</div>
+            <div className="text-[13px] txt-dim">购买记录功能开发中</div>
+            <div className="text-[11px] txt-faint mt-1">即将支持查看角色的购物历史</div>
+          </div>
+        </div>
+      )}
+
+      {/* 钱包 */}
+      {viewMode === 'wallet' && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[14px] font-medium txt-accent">
+              {selectedChar?.name} 的钱包
+            </div>
+            <button
+              onClick={() => setViewMode(null)}
+              className="text-[12px] txt-faint tap"
+            >
+              返回
+            </button>
+          </div>
+
+          <div className="p-4 glass-strong rounded-2xl mb-4">
+            <div className="text-center">
+              <div className="text-[11px] txt-faint mb-1">账户余额</div>
+              <div className="text-[32px] font-bold txt-accent">
+                ¥{selectedChar?.balance || 0}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-8 text-center">
+            <div className="text-[32px] mb-2">💰</div>
+            <div className="text-[13px] txt-dim">交易记录功能开发中</div>
+            <div className="text-[11px] txt-faint mt-1">即将支持查看详细交易流水</div>
+          </div>
         </div>
       )}
     </AppScreen>
