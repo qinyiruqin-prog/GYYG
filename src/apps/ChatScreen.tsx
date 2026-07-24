@@ -7,6 +7,7 @@ import { MoneyTransferBubble } from '../components/MoneyTransferBubble';
 import { SendMoneyModal } from '../components/SendMoneyModal';
 import { uid } from '../utils';
 import { checkAndAutoSummarize } from '../utils/autoMemory';
+import { sendNotification, requestNotificationPermission } from '../utils/notification';
 import { getPeriodPrompt } from './PeriodScreen';
 import { callChatRich, generateImage, textToSpeech, detectNpcs, detectPlotEvents, evaluateOutgoingRequest, generateIncomingRequest, askAI, type ChatMsg } from '../api';
 import type { ApiConfig, Character, ChatThread, ChatMessage, WorldEntry, MessageMedia, StoryEvent, UserIdentity, FriendRequest, AppSettings, CallRecord, MoneyTransfer } from '../types';
@@ -1144,6 +1145,11 @@ function ChatConversation({
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [thread.messages, loading]);
 
+  // 请求通知权限
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
+
   // 清理延迟回复计时器
   useEffect(() => {
     return () => {
@@ -1514,6 +1520,18 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
         ts: Date.now(),
       };
       onSend([...next, assistantMsg]);
+
+      // 发送系统通知（仅在用户不在当前页面时）
+      sendNotification({
+        title: `${thread.charAltName || char.name}`,
+        body: assistantMsg.content.substring(0, 100) + (assistantMsg.content.length > 100 ? '...' : ''),
+        icon: char.avatar || undefined,
+        tag: `chat-${char.id}`,
+        onClick: () => {
+          // 点击通知后聚焦到窗口
+          window.focus();
+        },
+      });
 
       // 自动翻译功能
       if (settings.autoTranslateEnabled && assistantMsg.content) {
