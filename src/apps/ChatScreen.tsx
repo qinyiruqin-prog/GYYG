@@ -1243,6 +1243,21 @@ function ChatConversation({
       ? (thread.offlineMaxWordCount || 200)
       : (thread.maxWordCount || 120);
 
+    // 主动互动能力
+    if (activeInteractEnabled !== false && activeInteractMode === 'auto') {
+      sys += `\n\n[主动互动能力 - 自动挡已开启]
+你具备完全的主动互动能力。在合适的时机，你可以自然地：
+- 主动发起视频通话（当你想见对方、有重要事情要说、或者想更亲密地聊天时）
+- 主动发起语音通话（当你想听到对方声音、或者打字不方便时）
+- 主动发送照片/自拍（分享你的日常瞬间）
+- 主动发送语音消息（表达语气和情感）
+- 主动发朋友圈、发短信、发邮件
+- 主动发红包/转账（表达心意）
+
+请根据对话情境和你的情绪状态，自然地选择合适的互动方式。不要总是只用文字回复，要像真人一样多样化地互动。
+当你想打视频或语音时，请在回复中表达"我想给你打个视频/语音"之类的意图，系统会自动触发通话。`;
+    }
+
     sys += `\n\n[回复要求]
 你需要回复 ${minReplyCount} 到 ${maxReplyCount} 条消息（根据对话内容自然决定具体条数）。
 每条消息的字数应该在 ${minWords} 到 ${maxWords} 字之间。
@@ -1382,6 +1397,27 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
           }
         }
 
+        // 自动挡模式：检测是否要主动打视频或语音
+        if (activeInteractEnabled !== false && activeInteractMode === 'auto') {
+          const content = assistantMsg.content.toLowerCase();
+          const hasVideoIntent = content.includes('视频') || content.includes('video') || content.includes('看你') || content.includes('见你');
+          const hasVoiceIntent = content.includes('语音') || content.includes('打电话') || content.includes('给你打') || content.includes('voice call');
+
+          if (hasVideoIntent && (content.includes('想') || content.includes('要') || content.includes('给你打') || content.includes('打个'))) {
+            // 延迟1-2秒后触发视频通话，让用户看到消息
+            setTimeout(() => {
+              setInCall(true);
+              setCallStartTime(Date.now());
+            }, 1000 + Math.random() * 1000);
+          } else if (hasVoiceIntent && (content.includes('想') || content.includes('要') || content.includes('给你打') || content.includes('打个'))) {
+            // 延迟1-2秒后触发语音通话
+            setTimeout(() => {
+              setInCall(true);
+              setCallStartTime(Date.now());
+            }, 1000 + Math.random() * 1000);
+          }
+        }
+
         // Media generation
         const media: MessageMedia[] = [];
         try {
@@ -1494,6 +1530,27 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
           } catch (err) {
             console.error('Auto-translation error:', err);
           }
+        }
+      }
+
+      // 自动挡模式：检测是否要主动打视频或语音
+      if (activeInteractEnabled !== false && activeInteractMode === 'auto') {
+        const content = assistantMsg.content.toLowerCase();
+        const hasVideoIntent = content.includes('视频') || content.includes('video') || content.includes('看你') || content.includes('见你');
+        const hasVoiceIntent = content.includes('语音') || content.includes('打电话') || content.includes('给你打') || content.includes('voice call');
+
+        if (hasVideoIntent && (content.includes('想') || content.includes('要') || content.includes('给你打') || content.includes('打个'))) {
+          // 延迟1-2秒后触发视频通话，让用户看到消息
+          setTimeout(() => {
+            setInCall(true);
+            setCallStartTime(Date.now());
+          }, 1000 + Math.random() * 1000);
+        } else if (hasVoiceIntent && (content.includes('想') || content.includes('要') || content.includes('给你打') || content.includes('打个'))) {
+          // 延迟1-2秒后触发语音通话
+          setTimeout(() => {
+            setInCall(true);
+            setCallStartTime(Date.now());
+          }, 1000 + Math.random() * 1000);
         }
       }
 
