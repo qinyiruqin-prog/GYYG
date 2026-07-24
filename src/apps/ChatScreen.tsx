@@ -1296,11 +1296,18 @@ ${maxReplyCount > 1 ? '多条消息可以形成连贯的对话，例如第一条
         // 线下模式格式化：括号动作和语言之间加空行
         let formattedContent = rich.content;
         if (currentMode === 'offline') {
-          // 格式化规则：(动作) 后面如果有文字，需要空行分隔
-          formattedContent = formattedContent
-            .replace(/\)\s*([^(\n])/g, ')\n\n$1') // 右括号后如果有非括号非换行字符，加双换行
-            .replace(/([^)\n])\s*\(/g, '$1\n\n(') // 左括号前如果有非括号非换行字符，加双换行
-            .replace(/\n{3,}/g, '\n\n'); // 防止超过2个换行
+          // 先统一处理所有换行，去掉多余空行
+          formattedContent = formattedContent.replace(/\n{2,}/g, '\n').trim();
+
+          // 格式化规则：
+          // 1. 右括号 ) 后面如果紧跟非括号内容，加双换行
+          formattedContent = formattedContent.replace(/\)(\s*)([^\s\n(])/g, ')\n\n$2');
+
+          // 2. 非括号内容后面如果紧跟左括号 (，加双换行
+          formattedContent = formattedContent.replace(/([^\s\n)])(\s*)\(/g, '$1\n\n(');
+
+          // 3. 确保不会有超过2个连续换行
+          formattedContent = formattedContent.replace(/\n{3,}/g, '\n\n');
         }
 
         const assistantMsg: ChatMessage = {
