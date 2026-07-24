@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { AppScreen } from '../components/AppScreen';
 import { UserPlus, CheckCircle, User } from 'lucide-react';
 import type { UserIdentity } from '../types';
@@ -25,27 +24,24 @@ export function AltAccountsScreen({
   return (
     <AppScreen title="小号管理" onBack={onBack}>
       <div className="space-y-4">
-        {/* 当前账号 */}
+        {/* 当前身份 */}
         {activeUserId && (
           <div className="glass rounded-2xl p-4">
-            <div className="text-[11px] txt-faint mb-2">当前身份</div>
+            <div className="text-[11px] txt-faint mb-3">当前身份</div>
             {users
               .filter((u) => u.id === activeUserId)
               .map((user) => (
                 <div key={user.id} className="flex items-center gap-3">
-                  <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-[24px] shrink-0"
-                    style={{ background: 'var(--icon-bg-active)' }}
-                  >
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center text-[24px] shrink-0 glass">
                     {user.avatar || '👤'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className="text-[15px] font-medium truncate">{user.nickname}</div>
-                      <CheckCircle size={14} className="txt-accent" />
+                      <div className="text-[15px] font-medium truncate">{user.nickname || '未命名'}</div>
+                      <CheckCircle size={14} className="txt-accent shrink-0" />
                     </div>
                     {user.signature && (
-                      <div className="text-[12px] txt-dim truncate">{user.signature}</div>
+                      <div className="text-[12px] txt-dim truncate mt-0.5">{user.signature}</div>
                     )}
                   </div>
                 </div>
@@ -66,19 +62,16 @@ export function AltAccountsScreen({
                   onClick={() => onSwitch?.(user.id)}
                   disabled={user.id === activeUserId}
                   className={`w-full glass rounded-2xl p-4 text-left tap ${
-                    user.id === activeUserId ? 'opacity-50' : ''
+                    user.id === activeUserId ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-[24px] shrink-0"
-                      style={{ background: 'var(--icon-bg-active)' }}
-                    >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-[24px] shrink-0 glass-strong">
                       {user.avatar || '👤'}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <div className="text-[14px] font-medium truncate">{user.nickname}</div>
+                        <div className="text-[14px] font-medium truncate">{user.nickname || '未命名'}</div>
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--accent)] text-[var(--bg)] font-bold">
                           主号
                         </span>
@@ -110,19 +103,16 @@ export function AltAccountsScreen({
                   onClick={() => onSwitch?.(user.id)}
                   disabled={user.id === activeUserId}
                   className={`w-full glass rounded-2xl p-4 text-left tap ${
-                    user.id === activeUserId ? 'opacity-50' : ''
+                    user.id === activeUserId ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-[24px] shrink-0"
-                      style={{ background: 'var(--icon-bg-active)' }}
-                    >
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-[24px] shrink-0 glass-strong">
                       {user.avatar || '👤'}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-[14px] font-medium truncate mb-0.5">
-                        {user.nickname}
+                        {user.nickname || '未命名'}
                       </div>
                       {user.signature && (
                         <div className="text-[11px] txt-dim truncate">{user.signature}</div>
@@ -143,7 +133,7 @@ export function AltAccountsScreen({
           <div className="glass rounded-2xl p-8 text-center">
             <User size={48} className="txt-faint mx-auto mb-3" />
             <div className="text-[14px] txt-dim mb-2">还没有创建任何身份</div>
-            <div className="text-[12px] txt-faint">点击下方按钮创建你的第一个身份</div>
+            <div className="text-[12px] txt-faint">点击下方按钮创建第一个身份</div>
           </div>
         )}
 
@@ -158,7 +148,7 @@ export function AltAccountsScreen({
 
         {/* 说明 */}
         <div className="glass rounded-2xl p-4">
-          <div className="text-[11px] txt-faint space-y-1">
+          <div className="text-[11px] txt-faint leading-relaxed space-y-1">
             <div>💡 主号：你的主要身份，可以有多个</div>
             <div>💡 小号：标记为小号的身份，用于特定场景</div>
             <div>💡 点击身份卡片可快速切换当前身份</div>

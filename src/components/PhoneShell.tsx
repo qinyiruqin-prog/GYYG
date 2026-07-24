@@ -1308,7 +1308,7 @@ export function PhoneShell({
         onChangeLayout={setLayout}
         onShortcut={handleShortcut}
       />
-      <StatusBar style={dark ? 'dark' : 'light'} />
+      {/* StatusBar 已删除 - 手机自带状态栏，不需要重复显示 */}
       {renderOpen()}
     </div>
   );
