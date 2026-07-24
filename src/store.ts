@@ -1,6 +1,36 @@
 import type { AppSettings, PersistShape } from './types';
 
 const KEY = 'yangyangji:v1';
+const VERSION_KEY = 'yangyangji:dataVersion';
+const CURRENT_DATA_VERSION = '2.1.20260724';
+
+// 检查并清理旧数据
+function checkAndCleanOldData() {
+  const savedVersion = localStorage.getItem(VERSION_KEY);
+  if (savedVersion !== CURRENT_DATA_VERSION) {
+    console.log(`[数据清理] 检测到旧版本数据 (${savedVersion}), 清理中...`);
+    // 清除社交媒体相关的旧数据
+    const data = localStorage.getItem(KEY);
+    if (data) {
+      try {
+        const parsed = JSON.parse(data);
+        // 清除旧的社交帖子数据，强制使用新的预设数据
+        if (parsed.socialPosts) {
+          delete parsed.socialPosts;
+          localStorage.setItem(KEY, JSON.stringify(parsed));
+          console.log('[数据清理] 已清除旧的社交帖子数据');
+        }
+      } catch (e) {
+        console.error('[数据清理] 解析失败:', e);
+      }
+    }
+    localStorage.setItem(VERSION_KEY, CURRENT_DATA_VERSION);
+    console.log('[数据清理] 数据版本已更新到', CURRENT_DATA_VERSION);
+  }
+}
+
+// 在模块加载时执行检查
+checkAndCleanOldData();
 
 export const defaultSettings = (): AppSettings => ({
   themeId: 'midnight',
