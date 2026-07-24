@@ -27,7 +27,7 @@ export function isPageVisible(): boolean {
   return document.visibilityState === 'visible';
 }
 
-// 发送通知
+// 发送临时通知（5秒后自动关闭）
 export function sendNotification(options: {
   title: string;
   body: string;
@@ -65,4 +65,40 @@ export function sendNotification(options: {
 
   // 5秒后自动关闭
   setTimeout(() => notification.close(), 5000);
+}
+
+// 发送持久化通知（像微信一样，一直保留在通知栏直到用户手动清除）
+export function sendPersistentNotification(options: {
+  title: string;
+  body: string;
+  icon?: string;
+  tag?: string;
+  data?: any;
+}) {
+  if (!('Notification' in window)) {
+    return;
+  }
+
+  if (Notification.permission !== 'granted') {
+    return;
+  }
+
+  // 如果用户正在当前页面，不发送通知
+  if (isPageVisible()) {
+    return;
+  }
+
+  const notification = new Notification(options.title, {
+    body: options.body,
+    icon: options.icon || '/icon.png',
+    tag: options.tag || 'chat-message',
+    badge: options.icon || '/icon.png',
+    requireInteraction: true, // 关键：要求用户交互才关闭（持久化）
+    data: options.data,
+  });
+
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+  };
 }
