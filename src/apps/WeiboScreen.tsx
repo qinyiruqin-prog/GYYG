@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Repeat2, Send, Sparkles, TrendingUp, Image as ImageIcon, X, RefreshCw } from 'lucide-react';
 import { AppScreen } from '../components/AppScreen';
 import { Modal } from '../components/Sheet';
+import { SocialImage } from '../components/SocialImage';
 import { uid } from '../utils';
-import { askAI } from '../api';
+import { askAI, askAIJson } from '../api';
 import { generateNPCPostBatch } from '../services/npcPostService';
+import { generateSocialImage } from '../services/imageGenService';
 import type { ApiConfig, SocialPost, UserIdentity, Character } from '../types';
 
 // 热搜话题
@@ -41,8 +43,10 @@ export function WeiboScreen({
   const [composing, setComposing] = useState(false);
   const [content, setContent] = useState('');
   const [images, setImages] = useState<string[]>([]);
+  const [imageDescriptions, setImageDescriptions] = useState<string[]>([]);
   const [topic, setTopic] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
   const [commenting, setCommenting] = useState<SocialPost | null>(null);
   const [commentText, setCommentText] = useState('');
   const [detail, setDetail] = useState<SocialPost | null>(null);
@@ -117,6 +121,7 @@ export function WeiboScreen({
       authorAvatar: me?.avatar,
       content: content.trim(),
       images: images.length > 0 ? images : undefined,
+      imageDescriptions: imageDescriptions.length > 0 ? imageDescriptions : undefined,
       topic: topic.trim() || undefined,
       likes: 0,
       reposts: 0,
@@ -126,6 +131,7 @@ export function WeiboScreen({
     onChange([...posts, p]);
     setContent('');
     setImages([]);
+    setImageDescriptions([]);
     setTopic('');
     setComposing(false);
   };
@@ -137,7 +143,27 @@ export function WeiboScreen({
       const sys = '你在模拟微博用户发微博。内容口语化真实，15-120字，可以带话题标签#xxx#，可以带emoji。只输出正文。';
       const text = await askAI(api, sys, `可能的人物：${names}\n请发一条微博：`, { temperature: 0.95, maxTokens: 150 });
       const c = characters[Math.floor(Math.random() * characters.length)];
-      const useImage = Math.random() > 0.6;
+      const useImage = Math.random() > 0.5;
+
+      let postImages: string[] | undefined = undefined;
+      let postImageDescriptions: string[] | undefined = undefined;
+
+      if (useImage) {
+        // 生成图片描述
+        const imagePrompt = `根据这条微博内容生成一张配图：${text.substring(0, 100)}`;
+        const descSys = '你是图片描述生成器。根据微博内容，用10-20字描述一张适合的配图。只输出描述，不要引号。';
+        const imageDesc = await askAI(api, descSys, imagePrompt, { temperature: 0.8, maxTokens: 50 });
+
+        // 尝试生成真实图片
+        const imageResult = await generateSocialImage(api, imageDesc.trim());
+
+        if (imageResult.url) {
+          postImages = [imageResult.url];
+        } else {
+          postImageDescriptions = [imageResult.description];
+        }
+      }
+
       const p: SocialPost = {
         id: uid(),
         platform: 'weibo',
@@ -145,7 +171,8 @@ export function WeiboScreen({
         authorName: c?.name ?? 'AI网友',
         authorAvatar: c?.avatar,
         content: text.trim(),
-        images: useImage ? [SAMPLE_IMAGES[Math.floor(Math.random() * SAMPLE_IMAGES.length)]] : undefined,
+        images: postImages,
+        imageDescriptions: postImageDescriptions,
         likes: Math.floor(Math.random() * 200),
         reposts: Math.floor(Math.random() * 50),
         comments: [],
@@ -170,13 +197,31 @@ export function WeiboScreen({
     setCommenting(null);
   };
 
-  const addImage = () => {
-    if (images.length >= 9) return;
-    const img = SAMPLE_IMAGES[Math.floor(Math.random() * SAMPLE_IMAGES.length)];
-    setImages([...images, img]);
+  const addImage = async () => {
+    if (images.length + imageDescriptions.length >= 9) return;
+    setGeneratingImage(true);
+    try {
+      // 生成图片描述
+      const descSys = '你是图片描述生成器。生成一个10-20字的图片内容描述，比如"晴朗天空下的城市街景"、"温馨的咖啡厅一角"等。只输出描述。';
+      const imageDesc = await askAI(api, descSys, '请生成一个适合微博配图的描述：', { temperature: 0.9, maxTokens: 50 });
+
+      // 尝试生成真实图片
+      const imageResult = await generateSocialImage(api, imageDesc.trim());
+
+      if (imageResult.url) {
+        setImages([...images, imageResult.url]);
+      } else {
+        setImageDescriptions([...imageDescriptions, imageResult.description]);
+      }
+    } catch (e) {
+      alert(`图片生成失败：${(e as Error).message}`);
+    } finally {
+      setGeneratingImage(false);
+    }
   };
 
   const removeImage = (idx: number) => setImages(images.filter((_, i) => i !== idx));
+  const removeImageDescription = (idx: number) => setImageDescriptions(imageDescriptions.filter((_, i) => i !== idx));
 
   // 详情页
   if (detail) {
@@ -201,9 +246,26 @@ export function WeiboScreen({
             </div>
             <div className="text-[15px] leading-relaxed whitespace-pre-wrap mb-3">{p.content}</div>
             {p.topic && <div className="text-[14px] txt-accent mb-3">#{p.topic}#</div>}
-            {p.images && p.images.length > 0 && (
+            {(p.images && p.images.length > 0 || p.imageDescriptions && p.imageDescriptions.length > 0) && (
               <div className="grid grid-cols-3 gap-1.5 mb-3">
-                {p.images.map((img, i) => <img key={i} src={img} className="w-full aspect-square object-cover rounded-lg" alt="" />)}
+                {p.images?.map((img, i) => (
+                  <SocialImage
+                    key={`img-${i}`}
+                    url={img}
+                    description=""
+                    hasApi={true}
+                    className="aspect-square rounded-lg"
+                  />
+                ))}
+                {p.imageDescriptions?.map((desc, i) => (
+                  <SocialImage
+                    key={`desc-${i}`}
+                    url={undefined}
+                    description={desc}
+                    hasApi={false}
+                    className="aspect-square rounded-lg"
+                  />
+                ))}
               </div>
             )}
             <div className="flex items-center gap-6 text-[14px] txt-faint pt-2">
@@ -285,9 +347,26 @@ export function WeiboScreen({
                       </div>
                       <div className="text-[14px] leading-relaxed txt-dim whitespace-pre-wrap mb-2">{p.content}</div>
                       {p.topic && <div className="text-[13px] txt-accent mb-2">#{p.topic}#</div>}
-                      {p.images && p.images.length > 0 && (
-                        <div className={`grid gap-1.5 mb-2 ${p.images.length === 1 ? 'grid-cols-1' : 'grid-cols-3'}`}>
-                          {p.images.map((img, i) => <img key={i} src={img} className="w-full aspect-square object-cover rounded-lg" alt="" />)}
+                      {(p.images && p.images.length > 0 || p.imageDescriptions && p.imageDescriptions.length > 0) && (
+                        <div className={`grid gap-1.5 mb-2 ${(p.images?.length || 0) + (p.imageDescriptions?.length || 0) === 1 ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                          {p.images?.map((img, i) => (
+                            <SocialImage
+                              key={`img-${i}`}
+                              url={img}
+                              description=""
+                              hasApi={true}
+                              className="aspect-square rounded-lg"
+                            />
+                          ))}
+                          {p.imageDescriptions?.map((desc, i) => (
+                            <SocialImage
+                              key={`desc-${i}`}
+                              url={undefined}
+                              description={desc}
+                              hasApi={false}
+                              className="aspect-square rounded-lg"
+                            />
+                          ))}
                         </div>
                       )}
                       <div className="flex items-center gap-5 text-[13px] txt-faint">
@@ -392,12 +471,20 @@ export function WeiboScreen({
           placeholder="添加话题（选填）"
           className="w-full glass rounded-xl px-3 h-10 text-[13px] outline-none bg-transparent mb-3"
         />
-        {images.length > 0 && (
+        {(images.length > 0 || imageDescriptions.length > 0) && (
           <div className="grid grid-cols-3 gap-2 mb-3">
             {images.map((img, i) => (
-              <div key={i} className="relative aspect-square">
+              <div key={`img-${i}`} className="relative aspect-square">
                 <img src={img} className="w-full h-full object-cover rounded-lg" alt="" />
                 <button onClick={() => removeImage(i)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center tap">
+                  <X size={14} className="text-white" />
+                </button>
+              </div>
+            ))}
+            {imageDescriptions.map((desc, i) => (
+              <div key={`desc-${i}`} className="relative aspect-square">
+                <SocialImage url={undefined} description={desc} hasApi={false} className="h-full" />
+                <button onClick={() => removeImageDescription(i)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center tap">
                   <X size={14} className="text-white" />
                 </button>
               </div>
@@ -405,10 +492,12 @@ export function WeiboScreen({
           </div>
         )}
         <div className="flex items-center gap-2 mb-3">
-          <button onClick={addImage} disabled={images.length >= 9} className="tap glass rounded-lg p-2 disabled:opacity-50">
+          <button onClick={addImage} disabled={images.length + imageDescriptions.length >= 9 || generatingImage} className="tap glass rounded-lg p-2 disabled:opacity-50">
             <ImageIcon size={20} className="txt-accent" />
           </button>
-          <span className="text-[12px] txt-faint">{images.length}/9</span>
+          <span className="text-[12px] txt-faint">
+            {generatingImage ? '生成中...' : `${images.length + imageDescriptions.length}/9`}
+          </span>
         </div>
         <div className="flex gap-3">
           <button onClick={aiPost} disabled={generating} className="tap flex-1 h-11 rounded-full glass font-medium flex items-center justify-center gap-1.5 disabled:opacity-50">

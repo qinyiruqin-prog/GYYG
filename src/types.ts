@@ -527,6 +527,7 @@ export interface SocialPost {
   authorAvatar?: string;
   content: string;
   images?: string[];
+  imageDescriptions?: string[]; // 图片描述文字（当没有API时显示）
   likes: number;
   reposts: number;
   comments: { id: ID; authorName: string; content: string; ts: number }[];
